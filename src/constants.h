@@ -15,8 +15,8 @@ namespace constants {
 	constexpr float TO_DEG = 57.29578f;
 
 
-	constexpr int NUM_LAYERS = 64;
-	constexpr float LAYER_SPACING = 0.0025f;
+	constexpr int NUM_LAYERS = 256;
+	constexpr float LAYER_SPACING = 0.0003125f;
 
 
 	//Invalid returns for vectors and floats.
@@ -40,6 +40,8 @@ namespace display {
 
 	constexpr float FOV = 70.0f * constants::TO_RAD;
 	constexpr float MAX_FREQ = 60.0f;
+
+	constexpr glm::vec3 SKY_COLOUR = glm::vec3(0.4157f, 0.6039f, 0.7098f);
 }
 
 namespace dev {

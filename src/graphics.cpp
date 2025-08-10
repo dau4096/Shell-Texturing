@@ -374,6 +374,7 @@ void prepareOpenGL() {
 	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
 	glEnable(GL_BLEND);
+	glClearColor(display::SKY_COLOUR.x, display::SKY_COLOUR.y, display::SKY_COLOUR.z, 1.0f);
 
 	verticalFOV = 2.0f * atan(tan(display::FOV * 0.5f) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 	
@@ -410,6 +411,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "layerSpacing", constants::LAYER_SPACING);
 	uniforms::bindUniformValue(GLIndex::shellShader, "numLayers", constants::NUM_LAYERS);
 	uniforms::bindUniformValue(GLIndex::shellShader, "cameraPosition", camera.position);
+	uniforms::bindUniformValue(GLIndex::shellShader, "skyColour", display::SKY_COLOUR);
 
 	glBindVertexArray(GLIndex::shellVAO);
 	glDrawElements(GL_TRIANGLES, constants::NUM_LAYERS * 6, GL_UNSIGNED_INT, nullptr);

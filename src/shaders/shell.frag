@@ -11,14 +11,16 @@ out vec4 fragColour;
 uniform float layerSpacing;
 uniform int numLayers;
 uniform vec3 cameraPosition;
+uniform vec3 skyColour;
 
 
 
 /* CONFIG */
 #define SCALING 250.0f
-#define MAX_DISTANCE 16.0f
+#define MAX_DISTANCE 32.0f
 #define SHELL_COLOUR vec4(0.3333f, 0.3725f, 0.1765f, 1.0f)
 #define BASE_COLOUR vec4(0.4392f, 0.3294f, 0.2431f, 1.0f)
+#define USE_CYLINDRICAL_SHELLS true
 /* CONFIG */
 
 
@@ -41,17 +43,27 @@ void main() {
 
 	float distance = length(cameraPosition.xy - positionXY);
 	float distScaling = (1.0f - clamp(distance / MAX_DISTANCE, 0.0f, 1.0f));
-	float trueScaling = distScaling * SCALING;
-
-	float maxHeight = float(numLayers) * layerSpacing;
-	uint seed = uint(UV.x * trueScaling) * 73856093u ^ uint(UV.y * trueScaling) * 19349663u;
-	float randomDecimal = float(pcg_hash(seed)) / (pow(2.0f, 32.0f) - 1.0f);
-	float randomHeight = clamp(randomDecimal * maxHeight * distScaling, 0.0f, maxHeight);
-
-	if (layerHeight > randomHeight) {discard;}
-
 	float layerDecimal = float(layerIndex) / float(numLayers);
-	vec3 colour = mix(BASE_COLOUR.rgb, SHELL_COLOUR.rgb, layerDecimal);
-	fragColour = vec4(colour.rgb * layerDecimal, 1.0f);
+
+	//Height discard
+	float maxHeight = float(numLayers) * layerSpacing;
+	uint seed = uint(UV.x * SCALING) * 73856093u ^ uint(UV.y * SCALING) * 19349663u;
+	float randomDecimal = float(pcg_hash(seed)) / (pow(2.0f, 32.0f) - 1.0f);
+	float randomHeight = clamp(randomDecimal * maxHeight, 0.0f, maxHeight);
+	if (layerHeight > randomHeight) {discard;}
+	float thisBladeDecimal = layerHeight / randomHeight;
+
+
+	//Cylindrical discard
+	if ((layerIndex > 0) && USE_CYLINDRICAL_SHELLS) { //Layer 0 must be flat.
+		vec2 localPos = fract(UV * SCALING);
+		float thisLayerRadius = 1.0f - (thisBladeDecimal * randomDecimal);
+		float thisLayerDistance = length(localPos - 0.5f);
+		if (thisLayerDistance > thisLayerRadius) {discard;}
+	}
+
+	vec3 shellColour = mix(BASE_COLOUR.rgb, SHELL_COLOUR.rgb, layerDecimal) * layerDecimal;
+	fragColour = vec4(mix(skyColour.rgb, shellColour.rgb, distScaling), 1.0f);
+	//fragColour = vec4(distScaling, 0.0f, 0.0f, 1.0f);
 
 }
