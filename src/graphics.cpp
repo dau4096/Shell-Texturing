@@ -213,8 +213,8 @@ GLuint getVAO() {
 	std::array<float, (constants::NUM_LAYERS * 4 * 5)> vertices;
 	std::array<GLuint, (constants::NUM_LAYERS * 6)> indices;
 
-	#define START -1.0f
-	#define END 1.0f
+	#define START -32.0f
+	#define END 32.0f
 
 	int currentIndex = 0;
 	std::array<int, 6> iArray = {
@@ -409,6 +409,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "pvmMatrix", pvmMatrix);
 	uniforms::bindUniformValue(GLIndex::shellShader, "layerSpacing", constants::LAYER_SPACING);
 	uniforms::bindUniformValue(GLIndex::shellShader, "numLayers", constants::NUM_LAYERS);
+	uniforms::bindUniformValue(GLIndex::shellShader, "cameraPosition", camera.position);
 
 	glBindVertexArray(GLIndex::shellVAO);
 	glDrawElements(GL_TRIANGLES, constants::NUM_LAYERS * 6, GL_UNSIGNED_INT, nullptr);

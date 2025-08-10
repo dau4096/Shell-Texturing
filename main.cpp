@@ -63,7 +63,7 @@ void handleInputs() {
 	camera.viewAngle.x += cursorXDelta * constants::TO_RAD * constants::CAMERA_TURN_SPEED;
 	camera.viewAngle.x = fmodf(camera.viewAngle.x + constants::PI*3.0f, constants::PI2) - constants::PI;
 	double dY = cursorYDelta * constants::TO_RAD * constants::CAMERA_TURN_SPEED;
-	camera.viewAngle.y = glm::clamp(float(camera.viewAngle.y-dY), verticalFOV-0.5f*constants::PI, 0.5f*constants::PI-verticalFOV);
+	camera.viewAngle.y = glm::clamp(float(camera.viewAngle.y-dY), -0.5f*constants::PI, 0.5f*constants::PI);
 }
 
 
