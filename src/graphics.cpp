@@ -1,6 +1,7 @@
 #include "includes.h"
 #include "global.h"
 #include "utils.h"
+#include "tiny_obj_loader.h"
 using namespace std;
 using namespace utils;
 using namespace glm;

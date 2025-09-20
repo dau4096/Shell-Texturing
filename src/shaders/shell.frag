@@ -15,12 +15,13 @@ uniform vec3 skyColour;
 
 
 
+
 /* CONFIG */
 #define SCALING 250.0f
 #define MAX_DISTANCE 32.0f
 #define SHELL_COLOUR vec4(0.3333f, 0.3725f, 0.1765f, 1.0f)
 #define BASE_COLOUR vec4(0.4392f, 0.3294f, 0.2431f, 1.0f)
-#define USE_CYLINDRICAL_SHELLS true
+#define USE_CYLINDRICAL_SHELLS false
 /* CONFIG */
 
 
