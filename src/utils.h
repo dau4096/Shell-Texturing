@@ -4,9 +4,6 @@
 #include "includes.h"
 #include "global.h"
 #include "constants.h"
-#include <vector>
-#include <stdexcept>
-#include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
 
 using namespace std;
 
@@ -15,14 +12,26 @@ using namespace std;
 //Utility functions
 namespace utils {
 
-	static inline void hideConsole() {
+
+	//Console related functions
+	inline void hideConsole() {
+	#ifdef _WIN32
 		ShowWindow(GetConsoleWindow(), SW_HIDE);
+	#endif
 	}
-	static inline void showConsole() {
+
+	inline void showConsole() {
+	#ifdef _WIN32
 		ShowWindow(GetConsoleWindow(), SW_SHOW);
+	#endif
 	}
-	static inline bool isConsoleVisible() {
-		return IsWindowVisible(GetConsoleWindow()) != FALSE;
+
+	inline bool isConsoleVisible() {
+	#ifdef _WIN32
+		return IsWindowVisible(GetConsoleWindow());
+	#elif defined(__linux__)
+		return true;
+	#endif 
 	}
 
 

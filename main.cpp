@@ -134,14 +134,14 @@ int main() {
 			utils::showConsole();
 		}
 		std::cerr << "An exception was thrown: " << e.what() << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	} catch (...) {
 		if (!utils::isConsoleVisible()) {
 			utils::showConsole();
 		}
 		std::cerr << "An unspecified exception was thrown." << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	}
 }

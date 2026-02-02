@@ -149,11 +149,11 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 	GLuint vertexShader;
 	if (hasVertexSource) {
-		vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\"+ name +".vert");
+		vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/"+ name +".vert");
 	} else {
-		vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\generic.vert");
+		vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/generic.vert");
 	}
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src\\shaders\\"+ name +".frag");
+	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/"+ name +".frag");
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
