@@ -99,7 +99,6 @@ void main() {
 	float randomHeight = clamp(randomDecimal * maxHeight, 0.0f, maxHeight);
 	float layerDelta = layerIndex * layerSpacing; //Difference between the current layer and the base.
 	if (layerDelta > randomHeight) {discard;}
-	float thisBladeDecimal = layerDelta / randomHeight;
 	float baseHeight = layerHeight - layerDelta;
 
 
@@ -108,6 +107,7 @@ void main() {
 	if ((layerIndex > 0) && (distance < CYLINDER_DIST)) { //Layer 0 must be flat, and it must be only "grass" close to player.
 		vec2 localPos = fract(UV * SCALING);
 		float cylDistScaling = 1.0f - (distance / CYLINDER_DIST);
+		float thisBladeDecimal = layerDelta / randomHeight;
 		float thisLayerRadius = 1.0f - (thisBladeDecimal * randomDecimal) * cylDistScaling;
 		float thisLayerDistance = length(localPos - 0.5f);
 		if (thisLayerDistance > thisLayerRadius) {discard;}

@@ -70,7 +70,7 @@ void handleInputs() {
 	camera.viewAngle.x += cursorXDelta * constants::TO_RAD * constants::CAMERA_TURN_SPEED;
 	camera.viewAngle.x = fmodf(camera.viewAngle.x + constants::PI*3.0f, constants::PI2) - constants::PI;
 	double dY = cursorYDelta * constants::TO_RAD * constants::CAMERA_TURN_SPEED;
-	camera.viewAngle.y = glm::clamp(float(camera.viewAngle.y-dY), -0.5f*constants::PI, 0.5f*constants::PI);
+	camera.viewAngle.y = glm::clamp(float(camera.viewAngle.y-dY), -0.499f*constants::PI, 0.499f*constants::PI);
 }
 
 
@@ -102,7 +102,12 @@ int main() {
 	}
 
 
+	//Timer queries;
+	GLuint timerQuery;
+	GLuint64 GPUnanosecs; //Nanoseconds
+	glGenQueries(1, &timerQuery);
 
+	unsigned int frameNumber = 0u;
 	while (!glfwWindowShouldClose(Window)) {
 		double frameStart = glfwGetTime();
 		handleInputs();
@@ -115,18 +120,23 @@ int main() {
 			print(camera.position);
 			print(camera.viewAngle);
 		}
+		glBeginQuery(GL_TIME_ELAPSED, timerQuery);
 		frame::draw();
+		glEndQuery(GL_TIME_ELAPSED);
+		glFinish();
 
 
 		while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		glfwSwapBuffers(Window);
-		float freq = floor(1.0f / (glfwGetTime() - frameStart));
 		if constexpr (dev::SHOW_FREQ_CONSOLE) {
-			std::cout << freq << std::endl;
+			glGetQueryObjectui64v(timerQuery, GL_QUERY_RESULT, &GPUnanosecs);
+			double ms = GPUnanosecs / 1e6;
+			std::cout << "Frame #" << frameNumber << " took " << std::setprecision(2) << ms << "ms / Hypothetical framerate: " << static_cast<int>(1000.0d/ms) << endl;
 		}
 
 		cursorXPosPrev = cursorXPos;
 		cursorYPosPrev = cursorYPos;
+		frameNumber++;
 	}
 
 
