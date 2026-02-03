@@ -15,6 +15,7 @@ namespace constants {
 	constexpr float TO_DEG = 57.29578f;
 
 
+	constexpr int GRID_WIDTH = 128u;
 	constexpr int NUM_LAYERS = 64;
 	constexpr float MAX_HEIGHT = 0.125f;
 	constexpr float LAYER_SPACING = MAX_HEIGHT / float(NUM_LAYERS);

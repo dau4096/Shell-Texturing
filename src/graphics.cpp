@@ -210,81 +210,6 @@ static glm::mat4 getModelMat4(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale) {
 
 
 
-GLuint getVAO() {
-	std::array<float, (constants::NUM_LAYERS * 4 * 5)> vertices;
-	std::array<GLuint, (constants::NUM_LAYERS * 6)> indices;
-
-	#define START -32.0f
-	#define END 32.0f
-
-	int currentIndex = 0;
-	std::array<int, 6> iArray = {
-		0, 1, 2,
-		2, 3, 0
-	};
-	std::array<glm::vec4, 4> vecArray = {
-		//			X 	   Y     U     V
-		glm::vec4(START, START, 0.0f, 0.0f),
-		glm::vec4(START, END,	0.0f, 1.0f),
-		glm::vec4(END,   END,	1.0f, 1.0f),
-		glm::vec4(END,   START,	1.0f, 0.0f)
-	};
-	for (int layerIdx=0; layerIdx<constants::NUM_LAYERS; layerIdx++) {
-		int verticesIndex = layerIdx * 4 * 5; //4 vertices, with 5 values each.
-		int indicesIndex = layerIdx * 6;
-		float layerHeight = float(constants::LAYER_SPACING * layerIdx);
-
-		for (int vIdx=0; vIdx<4; vIdx++) {
-			glm::vec4 vecValues = vecArray[vIdx];
-			int offset = vIdx * 5;
-			vertices[verticesIndex + offset + 0] = vecValues.x;
-			vertices[verticesIndex + offset + 1] = vecValues.y;
-			vertices[verticesIndex + offset + 2] = layerHeight;
-			vertices[verticesIndex + offset + 3] = vecValues.z;
-			vertices[verticesIndex + offset + 4] = vecValues.w;
-		}
-
-		for (int iIdx=0; iIdx<6; iIdx++) {
-			int iVal = iArray[iIdx];
-			indices[indicesIndex + iIdx] = currentIndex + iVal;
-		}
-		currentIndex += 4;
-	}
-
-	//Create VAO
-	GLuint VAO;
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	//Create VBO
-	GLuint VBO;
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);
-
-	//Create EBO
-	GLuint EBO;
-	glGenBuffers(1, &EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices.data(), GL_STATIC_DRAW);
-
-	//Define position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	//Define UV attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	glBindVertexArray(0);
-
-	return VAO;
-}
-
-
-
 static inline glm::mat4 projectionMatrix() {
 	float aspectRatio = float(currentRenderResolution.x) / float(currentRenderResolution.y);
 	return glm::perspective(camera.FOV, aspectRatio, camera.nearZ, camera.farZ);
@@ -360,9 +285,152 @@ void APIENTRY openGLErrorCallback(
 }
 
 
+
+
+
+namespace noise {
+
+float fade(float t) {
+    //Smoothstep
+    return t*t*t*(t*((t*6)-15)+10);
+}
+
+float lerp(float a, float b, float t) {
+    return a + (t * (b - a));
+}
+
+float hash(int x, int y) {
+    //Deterministic pseudo-random in for range [0.0 → 1.0]
+    int h = (x * 374761393u) + (y * 668265263u);
+    h = (h ^ (h >> 13u)) * 1274126177u;
+    return (h & 0x7FFFFFFFu) / float(0x7FFFFFFFu);
+}
+
+float heightFunction(glm::vec2 position2D) {
+	int x0 = static_cast<int>(std::floor(position2D.x));
+    int y0 = static_cast<int>(std::floor(position2D.y));
+    int x1 = x0 + 1; int y1 = y0 + 1;
+
+    float sx = fade(position2D.x - x0);
+    float sy = fade(position2D.y - y0);
+
+    float n00 = hash(x0, y0);
+    float n10 = hash(x1, y0);
+    float n01 = hash(x0, y1);
+    float n11 = hash(x1, y1);
+
+    float ix0 = lerp(n00, n10, sx);
+    float ix1 = lerp(n01, n11, sx);
+
+    return lerp(ix0, ix1, sy);
+}
+
+}
+
+
+
+#define HOR_SCALE 8.0f
+#define VER_SCALE 0.5f
+std::vector<glm::vec3> vecArray;
+
+void generateGrid(int n) {
+	vecArray.clear();
+	vecArray.reserve(n*n);
+
+	float step = 2.0f / float(n-1);
+
+	for (int y=0; y<n; y++) {
+		for (int x=0; x<n; x++) {
+			float posX = -1.0f + (x * step);
+			float posY = -1.0f + (y * step);
+
+			glm::vec2 position2D = glm::vec2(posX, posY);
+			vecArray.emplace_back(glm::vec3(
+				position2D, (noise::heightFunction(position2D * HOR_SCALE) * VER_SCALE)
+			));
+		}
+	}
+}
+
+
+void generateGridIndices(int n, std::vector<GLuint>* indices, GLuint baseVertex) {
+	for (int y=0; y<(n-1); y++) {
+		for (int x=0; x<(n-1); x++) {
+			GLuint i0 = baseVertex + ((y * n) + x);
+			GLuint i1 = baseVertex + ((y * n) + x + 1);
+			GLuint i2 = baseVertex + (((y + 1) * n) + x);
+			GLuint i3 = baseVertex + (((y + 1) * n) + x + 1);
+
+			//T1
+			indices->emplace_back(i0);
+			indices->emplace_back(i1);
+			indices->emplace_back(i2);
+
+			//T2
+			indices->emplace_back(i1);
+			indices->emplace_back(i3);
+			indices->emplace_back(i2);
+		}
+	}
+}
+
+
+GLuint getVAO(int n) {
+	std::vector<float> vertices(constants::NUM_LAYERS * vecArray.size() * 4);
+	std::vector<GLuint> indices(constants::NUM_LAYERS * 6);
+	graphics::generateGrid(n);
+
+
+	int currentVertex = 0;
+	for (int layerIdx=0; layerIdx<constants::NUM_LAYERS; layerIdx++) {
+		int verticesOffset = layerIdx * vecArray.size() * 4; //n vertices, with 4 values each.
+		float layerHeight = float(constants::LAYER_SPACING * layerIdx);
+
+		for (int vIdx=0; vIdx<vecArray.size(); vIdx++) {
+			glm::vec3 vecValues = vecArray[vIdx];
+			vertices.push_back(vecValues.x * HOR_SCALE);
+			vertices.push_back(vecValues.y * HOR_SCALE);
+			vertices.push_back(vecValues.z + layerHeight);
+			vertices.push_back(layerIdx);
+		}
+
+		generateGridIndices(n, &indices, currentVertex);
+		currentVertex += vecArray.size();
+	}
+
+
+	//Create VAO
+	GLuint VAO;
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	//Create VBO
+	GLuint VBO;
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+	//Create EBO
+	GLuint EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
+
+	//Define position
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+
+	return VAO;
+}
+
+
 void prepareOpenGL() {
 	//OpenGL setup;
-	GLIndex::shellVAO = graphics::getVAO();
+	GLIndex::shellVAO = graphics::getVAO(constants::GRID_WIDTH);
 
 
 	//Voxel shader
@@ -370,12 +438,20 @@ void prepareOpenGL() {
 
 
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+
+	//Depth and clear.
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
-	glEnable(GL_BLEND);
 	glClearColor(display::SKY_COLOUR.x, display::SKY_COLOUR.y, display::SKY_COLOUR.z, 1.0f);
+
+	//Culling
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
+	//Alpha blending
+	glEnable(GL_BLEND);
 
 	verticalFOV = 2.0f * atan(tan(display::FOV * 0.5f) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 	
@@ -415,7 +491,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "skyColour", display::SKY_COLOUR);
 
 	glBindVertexArray(GLIndex::shellVAO);
-	glDrawElements(GL_TRIANGLES, constants::NUM_LAYERS * 6, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, graphics::vecArray.size() * constants::NUM_LAYERS * 6, GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
 	utils::GLErrorcheck("Voxel Shader", true);
 }
