@@ -10,14 +10,14 @@ LIBS = -lglfw -lGLEW -lGL -lpugixml -lm -ldl -pthread
 SOURCES = main.cpp src/graphics.cpp src/physics.cpp src/utils.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
-all: app
+all: shell
 
-app: $(OBJECTS)
-	$(CC) $(OBJECTS) $(LIBS) -o app
+shell: $(OBJECTS)
+	$(CC) $(OBJECTS) $(LIBS) -o shell
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJECTS) app
+	rm -f $(OBJECTS) shell
 
