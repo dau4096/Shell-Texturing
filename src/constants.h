@@ -16,9 +16,11 @@ namespace constants {
 
 
 	constexpr int GRID_WIDTH = 128u;
+	constexpr float NOISE_FREQ = 0.5f;
 	constexpr int NUM_LAYERS = 64;
 	constexpr float MAX_HEIGHT = 0.125f;
 	constexpr float LAYER_SPACING = MAX_HEIGHT / float(NUM_LAYERS);
+	constexpr glm::vec2 SCALE = glm::vec2(32.0f, 1.0f);
 
 
 	//Invalid returns for vectors and floats.

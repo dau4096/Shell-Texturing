@@ -25,6 +25,7 @@ uniform vec3 skyColour;
 #define MAX_DISTANCE 32.0f
 #define SHELL_COLOUR vec4(0.3333f, 0.3725f, 0.1765f, 1.0f)
 #define BASE_COLOUR vec4(0.4392f, 0.3294f, 0.2431f, 1.0f)
+const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 //#define USE_CYLINDRICAL_SHELLS
 /* CONFIG */
 
@@ -64,7 +65,6 @@ void main() {
 
 	//Cylindrical discard
 #ifdef USE_CYLINDRICAL_SHELLS
-	if (layerIndex > 0) { //Layer 0 must be flat.
 		vec2 localPos = fract(UV * SCALING);
 		float thisLayerRadius = 1.0f - (thisBladeDecimal * randomDecimal);
 		float thisLayerDistance = length(localPos - 0.5f);
@@ -73,9 +73,8 @@ void main() {
 #endif
 
 
-	float lightMultiplier = (layerDecimal * 0.75f) + 0.25f;
+	float lightMultiplier = ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal);
 	vec3 shellColour = mix(BASE_COLOUR.rgb, SHELL_COLOUR.rgb, layerDecimal) * lightMultiplier;
 	fragColour = vec4(shellColour.rgb, 1.0f);
-	//fragColour = vec4(distScaling, 0.0f, 0.0f, 1.0f);
 
 }

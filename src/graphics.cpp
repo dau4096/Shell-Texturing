@@ -290,52 +290,70 @@ void APIENTRY openGLErrorCallback(
 
 namespace noise {
 
-float fade(float t) {
-    //Smoothstep
-    return t*t*t*(t*((t*6)-15)+10);
+inline float fade(float t) {
+	//Smoothstep
+	return t*t*t*(t*((t*6)-15)+10);
 }
 
-float lerp(float a, float b, float t) {
-    return a + (t * (b - a));
+
+inline float lerp(float a, float b, float t) {
+	return a + (t * (b - a));
 }
 
-float hash(int x, int y) {
-    //Deterministic pseudo-random in for range [0.0 → 1.0]
-    int h = (x * 374761393u) + (y * 668265263u);
-    h = (h ^ (h >> 13u)) * 1274126177u;
-    return (h & 0x7FFFFFFFu) / float(0x7FFFFFFFu);
+
+inline float hash(int x, int y) {
+	//Deterministic pseudo-random in for range [0.0 → 1.0]
+	int h = (x * 374761393u) + (y * 668265263u);
+	h = (h ^ (h >> 13u)) * 1274126177u;
+	return (h & 0x7FFFFFFFu) / float(0x7FFFFFFFu);
 }
+
 
 float heightFunction(glm::vec2 position2D) {
 	int x0 = static_cast<int>(std::floor(position2D.x));
-    int y0 = static_cast<int>(std::floor(position2D.y));
-    int x1 = x0 + 1; int y1 = y0 + 1;
+	int y0 = static_cast<int>(std::floor(position2D.y));
+	int x1 = x0 + 1; int y1 = y0 + 1;
 
-    float sx = fade(position2D.x - x0);
-    float sy = fade(position2D.y - y0);
+	float sx = fade(position2D.x - x0);
+	float sy = fade(position2D.y - y0);
 
-    float n00 = hash(x0, y0);
-    float n10 = hash(x1, y0);
-    float n01 = hash(x0, y1);
-    float n11 = hash(x1, y1);
+	float n00 = hash(x0, y0);
+	float n10 = hash(x1, y0);
+	float n01 = hash(x0, y1);
+	float n11 = hash(x1, y1);
 
-    float ix0 = lerp(n00, n10, sx);
-    float ix1 = lerp(n01, n11, sx);
+	float ix0 = lerp(n00, n10, sx);
+	float ix1 = lerp(n01, n11, sx);
 
-    return lerp(ix0, ix1, sy);
+	return lerp(ix0, ix1, sy);
+}
+
+
+glm::vec3 computeNormal(
+	const glm::vec2 position2D,
+	float epsilon = 0.01f
+) {
+	float hL = heightFunction(position2D + glm::vec2(-epsilon,  0.0f));
+	float hR = heightFunction(position2D + glm::vec2( epsilon,  0.0f));
+	float hD = heightFunction(position2D + glm::vec2( 0.0f,    -epsilon));
+	float hU = heightFunction(position2D + glm::vec2( 0.0f,     epsilon));
+
+	float dX = (hR - hL) / (2.0f * epsilon);
+	float dY = (hU - hD) / (2.0f * epsilon);
+
+	return glm::normalize(glm::vec3(-dX, -dY, 1.0f));
 }
 
 }
 
 
 
-#define HOR_SCALE 8.0f
-#define VER_SCALE 0.5f
-std::vector<glm::vec3> vecArray;
+std::vector<glm::vec3> singleLayerVertexArray;
+std::vector<glm::vec3> singleLayerNormalArray;
 
 void generateGrid(int n) {
-	vecArray.clear();
-	vecArray.reserve(n*n);
+	singleLayerVertexArray.clear();     	singleLayerNormalArray.clear();
+	singleLayerVertexArray.reserve(n*n);	singleLayerNormalArray.reserve(n*n);
 
 	float step = 2.0f / float(n-1);
 
@@ -345,9 +363,11 @@ void generateGrid(int n) {
 			float posY = -1.0f + (y * step);
 
 			glm::vec2 position2D = glm::vec2(posX, posY);
-			vecArray.emplace_back(glm::vec3(
-				position2D, (noise::heightFunction(position2D * HOR_SCALE) * VER_SCALE)
+			glm::vec2 noisePos = position2D * constants::SCALE.x * constants::NOISE_FREQ;
+			singleLayerVertexArray.emplace_back(glm::vec3(
+				position2D, (noise::heightFunction(noisePos) * constants::SCALE.y)
 			));
+			singleLayerNormalArray.emplace_back(noise::computeNormal(noisePos, 0.5f));
 		}
 	}
 }
@@ -376,26 +396,36 @@ void generateGridIndices(int n, std::vector<GLuint>* indices, GLuint baseVertex)
 
 
 GLuint getVAO(int n) {
-	std::vector<float> vertices(constants::NUM_LAYERS * vecArray.size() * 4);
-	std::vector<GLuint> indices(constants::NUM_LAYERS * 6);
+	std::vector<float> vertices;
+	std::vector<GLuint> indices;
 	graphics::generateGrid(n);
 
 
 	int currentVertex = 0;
 	for (int layerIdx=0; layerIdx<constants::NUM_LAYERS; layerIdx++) {
-		int verticesOffset = layerIdx * vecArray.size() * 4; //n vertices, with 4 values each.
+		int verticesOffset = layerIdx * singleLayerVertexArray.size() * 7; //n vertices, with 7 values each.
 		float layerHeight = float(constants::LAYER_SPACING * layerIdx);
 
-		for (int vIdx=0; vIdx<vecArray.size(); vIdx++) {
-			glm::vec3 vecValues = vecArray[vIdx];
-			vertices.push_back(vecValues.x * HOR_SCALE);
-			vertices.push_back(vecValues.y * HOR_SCALE);
-			vertices.push_back(vecValues.z + layerHeight);
+		for (int vIdx=0; vIdx<singleLayerVertexArray.size(); vIdx++) {
+			glm::vec3 position = singleLayerVertexArray[vIdx];
+			glm::vec3 normal = singleLayerNormalArray[vIdx];
+
+			//Position
+			vertices.push_back(position.x * constants::SCALE.x);
+			vertices.push_back(position.y * constants::SCALE.x);
+			vertices.push_back(position.z + layerHeight);
+
+			//Layer index
 			vertices.push_back(layerIdx);
+
+			//Normal
+			vertices.push_back(normal.x);
+			vertices.push_back(normal.y);
+			vertices.push_back(normal.z);
 		}
 
 		generateGridIndices(n, &indices, currentVertex);
-		currentVertex += vecArray.size();
+		currentVertex += singleLayerVertexArray.size();
 	}
 
 
@@ -419,8 +449,12 @@ GLuint getVAO(int n) {
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
 
 	//Define position
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+
+	//Define normal
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(4 * sizeof(float)));
+	glEnableVertexAttribArray(1);
 
 	glBindVertexArray(0);
 
@@ -491,7 +525,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "skyColour", display::SKY_COLOUR);
 
 	glBindVertexArray(GLIndex::shellVAO);
-	glDrawElements(GL_TRIANGLES, graphics::vecArray.size() * constants::NUM_LAYERS * 6, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, graphics::singleLayerVertexArray.size() * constants::NUM_LAYERS * 6, GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
 	utils::GLErrorcheck("Voxel Shader", true);
 }
