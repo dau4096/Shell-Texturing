@@ -33,7 +33,7 @@ const std::vector<int> monitoredKeys = {
 	GLFW_KEY_W, GLFW_KEY_S,
 	GLFW_KEY_A, GLFW_KEY_D,
 	GLFW_KEY_E, GLFW_KEY_Q,
-	GLFW_KEY_SPACE,
+	GLFW_KEY_SPACE, GLFW_KEY_1,
 	GLFW_KEY_LEFT_SHIFT,
 	GLFW_KEY_LEFT_CONTROL,
 	GLFW_KEY_ESCAPE,
@@ -43,7 +43,6 @@ double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
 
 void handleInputs() {
 	glfwPollEvents();
-	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 
 	//Get inputs for this frame
 	for (int key : monitoredKeys) {
@@ -54,6 +53,14 @@ void handleInputs() {
 		} else if (keyState == GLFW_RELEASE) {
 			keyMap[key] = false;
 		}
+	}
+
+
+	if (keyMap[GLFW_KEY_1]) {
+		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	} else {
+		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	}
 
 
@@ -104,9 +111,9 @@ int main() {
 		}
 
 		physics::cameraMove();
-		if (dev::SHOW_VALUES) {
-			printVec3(camera.position);
-			printVec2(camera.viewAngle);
+		if constexpr (dev::SHOW_VALUES) {
+			print(camera.position);
+			print(camera.viewAngle);
 		}
 		frame::draw();
 
@@ -114,7 +121,7 @@ int main() {
 		while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		glfwSwapBuffers(Window);
 		float freq = floor(1.0f / (glfwGetTime() - frameStart));
-		if (dev::SHOW_FREQ_CONSOLE) {
+		if constexpr (dev::SHOW_FREQ_CONSOLE) {
 			std::cout << freq << std::endl;
 		}
 

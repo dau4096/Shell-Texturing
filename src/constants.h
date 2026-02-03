@@ -15,12 +15,12 @@ namespace constants {
 	constexpr float TO_DEG = 57.29578f;
 
 
-	constexpr int GRID_WIDTH = 128u;
+	constexpr int GRID_WIDTH = 32;
 	constexpr float NOISE_FREQ = 0.5f;
 	constexpr int NUM_LAYERS = 64;
-	constexpr float MAX_HEIGHT = 0.125f;
+	constexpr float MAX_HEIGHT = 0.0625f;
 	constexpr float LAYER_SPACING = MAX_HEIGHT / float(NUM_LAYERS);
-	constexpr glm::vec2 SCALE = glm::vec2(32.0f, 1.0f);
+	constexpr glm::vec2 SCALE = glm::vec2(8.0f, 1.0f);
 
 
 	//Invalid returns for vectors and floats.
@@ -31,7 +31,7 @@ namespace constants {
 
 
 	constexpr float MOVE_SPEED_BASE = 0.025f;
-	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;
+	constexpr float MOVE_SPEED_CROUCH_MULT = 0.25f;
 	constexpr float MOVE_SPEED_RUN_MULT = 3.0f;
 
 	constexpr float CAMERA_TURN_SPEED = 0.125f;

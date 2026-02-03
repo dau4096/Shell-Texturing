@@ -3,7 +3,7 @@
 
 in vec2 positionXY;
 in flat int layerIndex;
-in flat float layerHeight;
+in float layerHeight;
 in vec2 layerUV;
 in vec3 normal;
 
@@ -21,12 +21,18 @@ uniform vec3 skyColour;
 
 
 /* CONFIG */
-#define SCALING 250.0f
+//Dist culling
+#define MAX_DISTANCE 4.0f
+#define FALLOFF 0.125f
+
+//Colour
 #define COLOUR_SCALING 6.0f
-#define MAX_DISTANCE 32.0f
 #define COLOUR_A    vec4(0.40f, 0.45f, 0.25f, 1.0f)
 #define COLOUR_B    vec4(0.30f, 0.35f, 0.10f, 1.0f)
 #define BASE_COLOUR vec4(0.44f, 0.33f, 0.24f, 1.0f)
+
+//Misc
+#define SCALING 250.0f
 const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define USE_CYLINDRICAL_SHELLS
 #define CYLINDER_DIST 1.0f
@@ -80,6 +86,11 @@ void main() {
 	float distance = length(cameraPosition.xy - positionXY);
 	float distScaling = (1.0f - clamp(distance / MAX_DISTANCE, 0.0f, 1.0f));
 	float layerDecimal = float(layerIndex) / float(numLayers);
+	if (length(cameraPosition - vec3(positionXY.xy, layerHeight)) > MAX_DISTANCE) {
+		int maxIDX = int(floor(numLayers + FALLOFF * numLayers * (MAX_DISTANCE - distance)));
+		if (maxIDX < layerIndex) {discard;}
+		layerDecimal = float(layerIndex) / float(maxIDX);
+	}
 
 
 	//Height discard

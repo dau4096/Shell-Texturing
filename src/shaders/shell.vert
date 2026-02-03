@@ -6,7 +6,7 @@ layout(location=1) in vec3 aNormal;
 
 out vec2 positionXY;
 out flat int layerIndex;
-out flat float layerHeight;
+out float layerHeight;
 out vec2 layerUV;
 out vec3 normal;
 

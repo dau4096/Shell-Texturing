@@ -395,8 +395,8 @@ void generateGridIndices(int n, std::vector<GLuint>* indices, GLuint baseVertex)
 }
 
 
+std::vector<float> vertices;
 GLuint getVAO(int n) {
-	std::vector<float> vertices;
 	std::vector<GLuint> indices;
 	graphics::generateGrid(n);
 
@@ -485,7 +485,7 @@ void prepareOpenGL() {
 	glCullFace(GL_BACK);
 
 	//Alpha blending
-	glEnable(GL_BLEND);
+	glDisable(GL_BLEND);
 
 	verticalFOV = 2.0f * atan(tan(display::FOV * 0.5f) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 	
@@ -511,7 +511,7 @@ void draw() {
 	glm::mat4 pvmMatrix = graphics::getPVMMatrix();
 
 	//Update resolution
-	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
+	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//Voxel Shader.
@@ -525,7 +525,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "skyColour", display::SKY_COLOUR);
 
 	glBindVertexArray(GLIndex::shellVAO);
-	glDrawElements(GL_TRIANGLES, graphics::singleLayerVertexArray.size() * constants::NUM_LAYERS * 6, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, graphics::vertices.size(), GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
 	utils::GLErrorcheck("Voxel Shader", true);
 }

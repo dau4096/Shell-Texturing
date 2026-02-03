@@ -40,7 +40,7 @@ namespace utils {
 			std::cout << str << std::endl;
 		}
 	}
-	static inline void printVec2(glm::vec2 vector, std::string name="") {
+	static inline void print(glm::vec2 vector, std::string name="") {
 		if (isConsoleVisible()) {
 			if (name.empty()) {
 				std::cout << "(" << vector.x << ", " << vector.y << ")" << std::endl;
@@ -49,7 +49,7 @@ namespace utils {
 			}
 		}
 	}
-	static inline void printVec3(glm::vec3 vector, std::string name="") {
+	static inline void print(glm::vec3 vector, std::string name="") {
 		if (isConsoleVisible()) {
 			if (name.empty()) {
 				std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
@@ -58,7 +58,7 @@ namespace utils {
 			}
 		}
 	}
-	static inline void printVec4(glm::vec4 vector, std::string name="") {
+	static inline void print(glm::vec4 vector, std::string name="") {
 		if (isConsoleVisible()) {
 			if (name.empty()) {
 				std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
@@ -67,7 +67,7 @@ namespace utils {
 			}
 		}
 	}
-	static inline void printMat4(glm::mat4 matrix, std::string name="") {
+	static inline void print(glm::mat4 matrix, std::string name="") {
 		if (isConsoleVisible()) {
 			if (name.empty()) {
 				std::cout << "[" << std::endl;
