@@ -1,7 +1,7 @@
 /* shell.vert */
 #version 460 core
 
-layout(location=0) in vec4 aPosition;
+layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 
 out vec2 positionXY;
@@ -16,10 +16,11 @@ uniform float layerSpacing;
 void main() {
 
 	positionXY = aPosition.xy;
-	layerHeight = aPosition.z;
-	layerIndex = int(aPosition.w);
-	gl_Position = pvmMatrix * vec4(aPosition.xyz, 1.0f);
+	layerIndex = int(gl_InstanceID);
+	float zOffset = (layerIndex*layerSpacing);
+	layerHeight = zOffset + aPosition.z;
+	gl_Position = pvmMatrix * vec4(positionXY, layerHeight, 1.0f);
 	layerUV = aPosition.xy;
-	normal = normalize(aNormal);
+	normal = aNormal;
 
 }

@@ -396,37 +396,27 @@ void generateGridIndices(int n, std::vector<GLuint>* indices, GLuint baseVertex)
 
 
 std::vector<float> vertices;
+std::vector<GLuint> indices;
 GLuint getVAO(int n) {
-	std::vector<GLuint> indices;
+	vertices.clear(); indices.clear();
+	vertices.reserve(singleLayerVertexArray.size() * 6);
 	graphics::generateGrid(n);
 
+	for (int vIdx = 0; vIdx < singleLayerVertexArray.size(); vIdx++) {
+		glm::vec3 position = singleLayerVertexArray[vIdx];
+		glm::vec3 normal   = singleLayerNormalArray[vIdx];
 
-	int currentVertex = 0;
-	for (int layerIdx=0; layerIdx<constants::NUM_LAYERS; layerIdx++) {
-		int verticesOffset = layerIdx * singleLayerVertexArray.size() * 7; //n vertices, with 7 values each.
-		float layerHeight = float(constants::LAYER_SPACING * layerIdx);
+		//Position - Z as base layer height.
+		vertices.push_back(position.x * constants::SCALE.x);
+		vertices.push_back(position.y * constants::SCALE.x);
+		vertices.push_back(position.z);
 
-		for (int vIdx=0; vIdx<singleLayerVertexArray.size(); vIdx++) {
-			glm::vec3 position = singleLayerVertexArray[vIdx];
-			glm::vec3 normal = singleLayerNormalArray[vIdx];
-
-			//Position
-			vertices.push_back(position.x * constants::SCALE.x);
-			vertices.push_back(position.y * constants::SCALE.x);
-			vertices.push_back(position.z + layerHeight);
-
-			//Layer index
-			vertices.push_back(layerIdx);
-
-			//Normal
-			vertices.push_back(normal.x);
-			vertices.push_back(normal.y);
-			vertices.push_back(normal.z);
-		}
-
-		generateGridIndices(n, &indices, currentVertex);
-		currentVertex += singleLayerVertexArray.size();
+		//Normal
+		vertices.push_back(normal.x);
+		vertices.push_back(normal.y);
+		vertices.push_back(normal.z);
 	}
+	generateGridIndices(n, &indices, 0);
 
 
 	//Create VAO
@@ -435,9 +425,9 @@ GLuint getVAO(int n) {
 	glBindVertexArray(VAO);
 
 	//Create VBO
-	GLuint VBO;
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	GLuint layerVBO;
+	glGenBuffers(1, &layerVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, layerVBO);
 
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
@@ -449,14 +439,15 @@ GLuint getVAO(int n) {
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
 
 	//Define position
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
 	//Define normal
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(4 * sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
 	glBindVertexArray(0);
+
 
 	return VAO;
 }
@@ -525,7 +516,11 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "skyColour", display::SKY_COLOUR);
 
 	glBindVertexArray(GLIndex::shellVAO);
-	glDrawElements(GL_TRIANGLES, graphics::vertices.size(), GL_UNSIGNED_INT, nullptr);
+	glDrawElementsInstanced(
+		GL_TRIANGLES, graphics::indices.size(),
+		GL_UNSIGNED_INT, nullptr,
+		constants::NUM_LAYERS
+	);
 	glBindVertexArray(0);
 	utils::GLErrorcheck("Voxel Shader", true);
 }
