@@ -31,7 +31,7 @@ uniform float frameRate;
 //Colour
 #define COLOUR_SCALING 6.0f
 #define COLOUR_A    vec4(0.325f, 0.375f, 0.125f, 1.0f)
-#define COLOUR_B    vec4(0.30f, 0.35f, 0.10f, 1.0f)
+#define COLOUR_B    vec4(0.40f, 0.40f, 0.15f, 1.0f)
 #define BASE_COLOUR vec4(0.44f, 0.33f, 0.24f, 1.0f)
 //Colour
 
