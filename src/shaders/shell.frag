@@ -45,6 +45,8 @@ const vec2 WIND_DIRECTION = normalize(vec2(1.0f, 0.25f));
 
 //Drawing
 #define SCALING 250.0f
+#define MIN_BLADE_HEIGHT_SCALE 0.325f
+float MIN_BLADE_HEIGHT = 0.0f;
 const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define HAS_CONICAL_SHELLS
 #define CONE_RENDER_DIST 1.0f
@@ -155,14 +157,14 @@ void distanceFromCamera2DCulling(out float distanceFromCamera2D, inout float lay
 
 
 void heightDiscard(
-	vec2 UV, float layerDelta,
+	vec2 UV, float layerDelta, float maxHeight,
 	out float randomDecimal, out float randomHeight
 ) {
 	//Height discard.
-	float maxHeight = float(numLayers) * layerSpacing;
 	randomDecimal = getRandom(abs(UV), SCALING);
 	randomHeight = clamp(randomDecimal * maxHeight, 0.0f, maxHeight);
-	if (layerDelta > randomHeight) {discard;}
+	if (layerDelta > randomHeight) {discard; /* Shell is above top of blade of grass. */}
+	if ((randomHeight < MIN_BLADE_HEIGHT) && (layerIndex > 0)) {discard; /* Blade too short, ignore. */}
 }
 
 
@@ -175,7 +177,7 @@ void conicalDiscard(
 		vec2 localPos = fract(UV * SCALING);
 		float cylDistScaling = 1.0f - (distanceFromCamera2D / CONE_RENDER_DIST);
 		float thisBladeDecimal = layerDelta / randomHeight;
-		float thisLayerRadius = 1.0f - (thisBladeDecimal * randomDecimal) * cylDistScaling;
+		float thisLayerRadius = 1.0f - (thisBladeDecimal * cylDistScaling);
 		float thisLayerdistanceFromCamera2D = length(localPos - 0.5f);
 		if (thisLayerdistanceFromCamera2D > thisLayerRadius) {discard;}
 	}
@@ -208,6 +210,8 @@ void main() {
 	float layerDelta = float(layerIndex) * layerSpacing; //Difference between the current layer and the base.
 	float distanceFromCamera2D;
 	distanceFromCamera2DCulling(distanceFromCamera2D, layerDecimal);
+	float maxHeight = float(numLayers) * layerSpacing;
+	MIN_BLADE_HEIGHT = MIN_BLADE_HEIGHT_SCALE * maxHeight;
 
 
 #ifdef HAS_WIND
@@ -217,7 +221,7 @@ void main() {
 
 
 	float randomDecimal, randomHeight;
-	heightDiscard(UV, layerDelta, randomDecimal, randomHeight);
+	heightDiscard(UV, layerDelta, maxHeight, randomDecimal, randomHeight);
 	conicalDiscard(UV, layerDelta, distanceFromCamera2D, randomDecimal, randomHeight);
 
 
