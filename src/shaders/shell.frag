@@ -27,7 +27,7 @@ uniform vec3 skyColour;
 
 //Colour
 #define COLOUR_SCALING 6.0f
-#define COLOUR_A    vec4(0.40f, 0.45f, 0.25f, 1.0f)
+#define COLOUR_A    vec4(0.325f, 0.375f, 0.125f, 1.0f)
 #define COLOUR_B    vec4(0.30f, 0.35f, 0.10f, 1.0f)
 #define BASE_COLOUR vec4(0.44f, 0.33f, 0.24f, 1.0f)
 
@@ -37,6 +37,69 @@ const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define USE_CYLINDRICAL_SHELLS
 #define CYLINDER_DIST 1.0f
 /* CONFIG */
+
+
+
+
+//// PERLIN NOISE ////
+//Src: [https://github.com/stegu/webgl-noise]
+vec4 mod289(vec4 x)
+{
+  return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec4 permute(vec4 x)
+{
+  return mod289(((x*34.0)+10.0)*x);
+}
+
+vec4 taylorInvSqrt(vec4 r)
+{
+  return 1.79284291400159 - 0.85373472095314 * r;
+}
+
+vec2 fade(vec2 t) {
+  return t*t*t*(t*(t*6.0-15.0)+10.0);
+}
+
+// Classic Perlin noise
+float cnoise(vec2 P)
+{
+  vec4 Pi = floor(P.xyxy) + vec4(0.0, 0.0, 1.0, 1.0);
+  vec4 Pf = fract(P.xyxy) - vec4(0.0, 0.0, 1.0, 1.0);
+  Pi = mod289(Pi); // To avoid truncation effects in permutation
+  vec4 ix = Pi.xzxz;
+  vec4 iy = Pi.yyww;
+  vec4 fx = Pf.xzxz;
+  vec4 fy = Pf.yyww;
+
+  vec4 i = permute(permute(ix) + iy);
+
+  vec4 gx = fract(i * (1.0 / 41.0)) * 2.0 - 1.0 ;
+  vec4 gy = abs(gx) - 0.5 ;
+  vec4 tx = floor(gx + 0.5);
+  gx = gx - tx;
+
+  vec2 g00 = vec2(gx.x,gy.x);
+  vec2 g10 = vec2(gx.y,gy.y);
+  vec2 g01 = vec2(gx.z,gy.z);
+  vec2 g11 = vec2(gx.w,gy.w);
+
+  vec4 norm = taylorInvSqrt(vec4(dot(g00, g00), dot(g01, g01), dot(g10, g10), dot(g11, g11)));
+
+  float n00 = norm.x * dot(g00, vec2(fx.x, fy.x));
+  float n01 = norm.y * dot(g01, vec2(fx.z, fy.z));
+  float n10 = norm.z * dot(g10, vec2(fx.y, fy.y));
+  float n11 = norm.w * dot(g11, vec2(fx.w, fy.w));
+
+  vec2 fade_xy = fade(Pf.xy);
+  vec2 n_x = mix(vec2(n00, n01), vec2(n10, n11), fade_xy.x);
+  float n_xy = mix(n_x.x, n_x.y, fade_xy.y);
+  return 2.3 * n_xy;
+}
+//// PERLIN NOISE ////
+
+
 
 
 
@@ -57,30 +120,12 @@ float getRandom(vec2 UV, float scale) {
 }
 
 
-float getRandomValueXY(vec2 UV, float scale) {
-    vec2 scaledPosition = UV * scale;
-    vec2 cell = floor(scaledPosition);
-    vec2 local = fract(scaledPosition);
-
-    float v00 = getRandom(cell + vec2(0.0, 0.0), 1.0);
-    float v10 = getRandom(cell + vec2(1.0, 0.0), 1.0);
-    float v01 = getRandom(cell + vec2(0.0, 1.0), 1.0);
-    float v11 = getRandom(cell + vec2(1.0, 1.0), 1.0);
-
-    vec2 w = local * local * (3.0f - (2.0f * local));
-
-    return mix(
-        mix(v00, v10, w.x),
-        mix(v01, v11, w.x),
-        w.y
-    );
-}
-
 
 void main() {
 
 	vec2 UV = fract(layerUV);
 	vec2 fragPosition = gl_FragCoord.xy;
+	float rand = cnoise(positionXY);
 
 
 	float distance = length(cameraPosition.xy - positionXY);
@@ -117,13 +162,12 @@ void main() {
 
 	float lightMultiplier = ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal);
 
-	float rand = getRandomValueXY(fract(layerUV), COLOUR_SCALING);
 	vec3 thisColour = mix(
 		COLOUR_A.rgb,
 		COLOUR_B.rgb,
 		rand
 	);
 	vec3 shellColour = mix(BASE_COLOUR.rgb, thisColour.rgb, layerDecimal) * lightMultiplier;
-	fragColour = vec4(shellColour.rg, 0.0f, 1.0f);
-
+	fragColour = vec4(shellColour.rgb, 1.0f);
+	//fragColour = vec4(randomHeight, rand, 0.0f, 1.0f);
 }
