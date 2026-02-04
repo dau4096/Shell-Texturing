@@ -9,6 +9,7 @@ inline glm::ivec2 currentRenderResolution;
 inline std::unordered_map<int, bool> keyMap;
 
 inline float verticalFOV;
+inline unsigned int frameNumber;
 
 
 namespace GLIndex {

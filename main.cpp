@@ -107,7 +107,7 @@ int main() {
 	GLuint64 GPUnanosecs; //Nanoseconds
 	glGenQueries(1, &timerQuery);
 
-	unsigned int frameNumber = 0u;
+	frameNumber = 0u;
 	while (!glfwWindowShouldClose(Window)) {
 		double frameStart = glfwGetTime();
 		handleInputs();

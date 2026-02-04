@@ -22,6 +22,7 @@ inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, si
 		glUniform1i(location, value);
 	}
 }
+inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, unsigned int value) {bindUniformValue(shaderProgram, uniformName, size_t(value));}
 inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, int value) {
 	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
 	if (location >= 0) {
@@ -514,6 +515,8 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "numLayers", constants::NUM_LAYERS);
 	uniforms::bindUniformValue(GLIndex::shellShader, "cameraPosition", camera.position);
 	uniforms::bindUniformValue(GLIndex::shellShader, "skyColour", display::SKY_COLOUR);
+	uniforms::bindUniformValue(GLIndex::shellShader, "frameNumber", frameNumber);
+	uniforms::bindUniformValue(GLIndex::shellShader, "frameRate", display::MAX_FREQ);
 
 	glBindVertexArray(GLIndex::shellVAO);
 	glDrawElementsInstanced(
