@@ -62,6 +62,7 @@ void handleInputs() {
 
 	if (keyMap[GLFW_KEY_I]) {camera.FOV *= 0.975f; std::cout << (camera.FOV*constants::TO_DEG) << std::endl;}
 	if (keyMap[GLFW_KEY_O]) {camera.FOV /= 0.975f; std::cout << (camera.FOV*constants::TO_DEG) << std::endl;}
+	camera.FOV = glm::clamp(camera.FOV, 0.05f, constants::PI/2.0f);
 
 
 	//View rotation

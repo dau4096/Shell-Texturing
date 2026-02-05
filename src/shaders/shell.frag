@@ -33,6 +33,7 @@ uniform float frameRate;
 #define COLOUR_A    vec4(0.325f, 0.375f, 0.125f, 1.0f)
 #define COLOUR_B    vec4(0.40f, 0.40f, 0.15f, 1.0f)
 #define BASE_COLOUR vec4(0.44f, 0.33f, 0.24f, 1.0f)
+#define SUN_BRIGHTNESS 1.5f
 //Colour
 
 //Wind
@@ -41,15 +42,23 @@ uniform float frameRate;
 const vec2 WIND_DIRECTION = normalize(vec2(1.0f, 0.25f));
 #define WIND_STRENGTH 6.0f
 #define WIND_SPEED 0.75f
+#define MAX_WIND_DIST 1.0f
 //Wind
 
+//Cloud shadows
+#define HAS_CLOUD_SHADOWS
+//#define DEBUG_CLOUD_SHADOWS
+#define CLOUD_SPEED 2.0f
+#define CLOUD_SIZE 12.0f
+//Cloud shadows
+
 //Drawing
-#define SCALING 250.0f
+#define SCALING 256.0f
 #define MIN_BLADE_HEIGHT_SCALE 0.325f
 float MIN_BLADE_HEIGHT = 0.0f;
 const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define HAS_CONICAL_SHELLS
-#define CONE_RENDER_DIST 1.0f
+#define CONE_RENDER_DIST 1.5f
 //Drawing
 /* CONFIG */
 
@@ -198,47 +207,69 @@ vec2 getWindOffset(float layerDecimal) {
 
 
 
+float getCloudShadow() {
+	return cnoise(
+		(positionXY + WIND_DIRECTION * CLOUD_SPEED * (frameNumber / frameRate)) / CLOUD_SIZE
+	) * 0.25f + 0.75f;
+}
+
 
 
 
 
 void main() {
 
+	//Initial setup of values
 	vec2 UV = layerUV;
 	float cPerlinRandom = cnoise(positionXY);
 	float layerDecimal = float(layerIndex) / float(numLayers); //0-1 of lowest layer to highest layer.
 	float layerDelta = float(layerIndex) * layerSpacing; //Difference between the current layer and the base.
 	float distanceFromCamera2D;
-	distanceFromCamera2DCulling(distanceFromCamera2D, layerDecimal);
+	distanceFromCamera2DCulling(distanceFromCamera2D, layerDecimal); //Reduce number of layers further away.
 	float maxHeight = float(numLayers) * layerSpacing;
 	MIN_BLADE_HEIGHT = MIN_BLADE_HEIGHT_SCALE * maxHeight;
 
 
+
 #ifdef HAS_WIND
-	vec2 windOffset = getWindOffset(layerDecimal);
+	float windDistBlend = distanceFromCamera2D / (MAX_DISTANCE_FROM_CAMERA * MAX_WIND_DIST);
+	vec2 windOffset = mix(
+		getWindOffset(layerDecimal),
+		vec2(0.0f, 0.0f),
+		windDistBlend*windDistBlend
+	); //Scrolling noise wind offset. Fades at larger //distance.
 	UV += windOffset;
+	#ifdef DEBUG_WIND
+		fragColour = vec4(windOffset.xy*SCALING*0.5f+0.5f, 0.0f, 1.0f);
+		return;
+	#endif
+#endif
+
+	
+	//Discarding stages
+	float randomDecimal, randomHeight;
+	heightDiscard(UV, layerDelta, maxHeight, randomDecimal, randomHeight); //Discard layer for being too high on this blade.
+	conicalDiscard(UV, layerDelta, distanceFromCamera2D, randomDecimal, randomHeight); //Discard frag for not being cylindrical with its inclusion
+
+
+#ifdef HAS_CLOUD_SHADOWS
+	float cloudEffect = getCloudShadow(); //Scrolling cloud shadow noise over terrain.
+	#ifdef DEBUG_CLOUD_SHADOWS
+		fragColour = vec4(cloudEffect, (cloudEffect-0.625f)/0.375f, 0.0f, 1.0f);
+		return;
+	#endif
 #endif
 
 
-	float randomDecimal, randomHeight;
-	heightDiscard(UV, layerDelta, maxHeight, randomDecimal, randomHeight);
-	conicalDiscard(UV, layerDelta, distanceFromCamera2D, randomDecimal, randomHeight);
-
-
-	float lightMultiplier = ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal);
-
+	//Combine into final colour
+	float lightMultiplier = SUN_BRIGHTNESS * ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal) * cloudEffect;
 	vec3 thisColour = mix(
 		COLOUR_A.rgb, COLOUR_B.rgb,	cPerlinRandom
 	);
 	vec3 shellColour = mix(BASE_COLOUR.rgb, thisColour.rgb, layerDecimal) * lightMultiplier;
 
-
-#if defined(HAS_WIND) && defined(DEBUG_WIND)
-	fragColour = vec4(windOffset.xy*SCALING*0.5f+0.5f, 0.0f, 1.0f);
-#else
 	float distanceDecimal = distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA;
 	fragColour = vec4(mix(
-		shellColour.rgb, skyColour.rgb, distanceDecimal*distanceDecimal
+		shellColour.rgb, skyColour.rgb, (distanceDecimal*distanceDecimal*distanceDecimal) //Cubed to let you see further, but not too far.
 	), 1.0f);
-#endif
 }
