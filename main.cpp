@@ -13,16 +13,12 @@ GLFWwindow* Window;
 
 void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	glViewport(0, 0, width, height);
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
 
 	currentWindowResolution = glm::ivec2(width, height);
 	currentRenderResolution = glm::ivec2(
 		glm::min(width, desiredRenderResolution.x),
 		glm::min(height, desiredRenderResolution.y)
 	);
-
-	verticalFOV = 2 * atan(tan(display::FOV * 0.5f) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 }
 
 
@@ -37,6 +33,7 @@ const std::vector<int> monitoredKeys = {
 	GLFW_KEY_LEFT_SHIFT,
 	GLFW_KEY_LEFT_CONTROL,
 	GLFW_KEY_ESCAPE,
+	GLFW_KEY_I, GLFW_KEY_O
 };
 
 double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
@@ -62,6 +59,9 @@ void handleInputs() {
 		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	}
+
+	if (keyMap[GLFW_KEY_I]) {camera.FOV *= 0.975f; std::cout << (camera.FOV*constants::TO_DEG) << std::endl;}
+	if (keyMap[GLFW_KEY_O]) {camera.FOV /= 0.975f; std::cout << (camera.FOV*constants::TO_DEG) << std::endl;}
 
 
 	//View rotation

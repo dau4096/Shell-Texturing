@@ -24,7 +24,7 @@ uniform float frameRate;
 
 /* CONFIG */
 //Distance culling
-#define MAX_distanceFromCamera2D 4.0f
+#define MAX_DISTANCE_FROM_CAMERA 32.0f
 #define FALLOFF 0.125f
 //Distance culling
 
@@ -147,9 +147,9 @@ float getRandom(vec2 UV, float scale) {
 //// SHELL TEXTURING ////
 void distanceFromCamera2DCulling(out float distanceFromCamera2D, inout float layerDecimal) {
 	distanceFromCamera2D = length(cameraPosition.xy - positionXY);
-	float distScaling = (1.0f - clamp(distanceFromCamera2D / MAX_distanceFromCamera2D, 0.0f, 1.0f));
-	if (length(cameraPosition - vec3(positionXY.xy, layerHeight)) > MAX_distanceFromCamera2D) {
-		int maxIDX = int(floor(numLayers + FALLOFF * numLayers * (MAX_distanceFromCamera2D - distanceFromCamera2D)));
+	float distScaling = (1.0f - clamp(distanceFromCamera2D / MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f));
+	if (length(cameraPosition - vec3(positionXY.xy, layerHeight)) > MAX_DISTANCE_FROM_CAMERA) {
+		int maxIDX = int(floor(numLayers + FALLOFF * numLayers * (MAX_DISTANCE_FROM_CAMERA - distanceFromCamera2D)));
 		if (maxIDX < layerIndex) {discard;}
 		layerDecimal = float(layerIndex) / float(maxIDX);
 	}

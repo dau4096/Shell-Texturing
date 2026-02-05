@@ -39,5 +39,5 @@ struct Camera {
 inline structs::Camera camera = structs::Camera(
 	glm::vec3(-2.0f, 0.0f, 1.0f), 	//Position
 	glm::vec2(1.57f, -0.7854f), 	//Angle
-	display::FOV, 0.01f, 100.0f 	//FOV, zNear, zFar
+	display::FOV, 0.1f, 32.0f 		//FOV, zNear, zFar
 );

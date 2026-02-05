@@ -213,7 +213,8 @@ static glm::mat4 getModelMat4(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale) {
 
 static inline glm::mat4 projectionMatrix() {
 	float aspectRatio = float(currentRenderResolution.x) / float(currentRenderResolution.y);
-	return glm::perspective(camera.FOV, aspectRatio, camera.nearZ, camera.farZ);
+	verticalFOV = 2 * atan(tan(camera.FOV * 0.5f) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+	return glm::perspective(verticalFOV, aspectRatio, camera.nearZ, camera.farZ);
 }
 
 static inline glm::mat4 viewMatrix() {
@@ -291,42 +292,80 @@ void APIENTRY openGLErrorCallback(
 
 namespace noise {
 
-inline float fade(float t) {
-	//Smoothstep
-	return t*t*t*(t*((t*6)-15)+10);
+//// PERLIN NOISE ////
+//Src: [https://github.com/stegu/webgl-noise]
+glm::vec4 mod289(glm::vec4 x)
+{
+	return x - floor(x * (1.0f / 289.0f)) * 289.0f;
 }
 
-
-inline float lerp(float a, float b, float t) {
-	return a + (t * (b - a));
+glm::vec4 permute(glm::vec4 x)
+{
+	return mod289(((x*34.0f)+10.0f)*x);
 }
 
-
-inline float hash(int x, int y) {
-	//Deterministic pseudo-random in for range [0.0 → 1.0]
-	int h = (x * 374761393u) + (y * 668265263u);
-	h = (h ^ (h >> 13u)) * 1274126177u;
-	return (h & 0x7FFFFFFFu) / float(0x7FFFFFFFu);
+glm::vec4 taylorInvSqrt(glm::vec4 r)
+{
+	return 1.79284291400159f - 0.85373472095314f * r;
 }
 
+glm::vec2 fade(glm::vec2 t) {
+	return t*t*t*(t*(t*6.0f-15.0f)+10.0f);
+}
 
+// Classic Perlin noise
+float cnoise(glm::vec2 P)
+{
+	glm::vec4 Pi = glm::floor(glm::vec4(P.x, P.y, P.x, P.y)) + glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+	glm::vec4 Pf = glm::fract(glm::vec4(P.x, P.y, P.x, P.y)) - glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+	Pi = mod289(Pi); // To avoid truncation effects in permutation
+	glm::vec4 ix = glm::vec4(Pi.x, Pi.z, Pi.x, Pi.z);
+	glm::vec4 iy = glm::vec4(Pi.y, Pi.y, Pi.w, Pi.w);
+	glm::vec4 fx = glm::vec4(Pf.x, Pf.z, Pf.x, Pf.z);
+	glm::vec4 fy = glm::vec4(Pf.y, Pf.y, Pf.w, Pf.w);
+
+	glm::vec4 i = permute(permute(ix) + iy);
+
+	glm::vec4 gx = glm::fract(i * (1.0f / 41.0f)) * 2.0f - 1.0f ;
+	glm::vec4 gy = glm::abs(gx) - 0.5f ;
+	glm::vec4 tx = glm::floor(gx + 0.5f);
+	gx = gx - tx;
+
+	glm::vec2 g00 = glm::vec2(gx.x,gy.x);
+	glm::vec2 g10 = glm::vec2(gx.y,gy.y);
+	glm::vec2 g01 = glm::vec2(gx.z,gy.z);
+	glm::vec2 g11 = glm::vec2(gx.w,gy.w);
+
+	glm::vec4 norm = taylorInvSqrt(glm::vec4(glm::dot(g00, g00), glm::dot(g01, g01), glm::dot(g10, g10), glm::dot(g11, g11)));
+
+	float n00 = norm.x * glm::dot(g00, glm::vec2(fx.x, fy.x));
+	float n01 = norm.y * glm::dot(g01, glm::vec2(fx.z, fy.z));
+	float n10 = norm.z * glm::dot(g10, glm::vec2(fx.y, fy.y));
+	float n11 = norm.w * glm::dot(g11, glm::vec2(fx.w, fy.w));
+
+	glm::vec2 fade_xy = fade(glm::vec2(Pf.x, Pf.y));
+	glm::vec2 n_x = glm::mix(glm::vec2(n00, n01), glm::vec2(n10, n11), fade_xy.x);
+	float n_xy = glm::mix(n_x.x, n_x.y, fade_xy.y);
+	return 2.3f * n_xy;
+}
+//// PERLIN NOISE ////
+
+
+#define NUMBER_OF_NOISE_OCTAVES 4
+#define NOISE_SCALE 0.1f
 float heightFunction(glm::vec2 position2D) {
-	int x0 = static_cast<int>(std::floor(position2D.x));
-	int y0 = static_cast<int>(std::floor(position2D.y));
-	int x1 = x0 + 1; int y1 = y0 + 1;
+	float result = 0.0f;
+	float amplitude = 1.0f;
+	float frequency = 1.0f;
 
-	float sx = fade(position2D.x - x0);
-	float sy = fade(position2D.y - y0);
+	for (int i=0; i<NUMBER_OF_NOISE_OCTAVES; i++) {
+		result += amplitude * cnoise(position2D * NOISE_SCALE * frequency);
 
-	float n00 = hash(x0, y0);
-	float n10 = hash(x1, y0);
-	float n01 = hash(x0, y1);
-	float n11 = hash(x1, y1);
+		frequency *= 2.0f;
+		amplitude *= 0.5f;
+	}
 
-	float ix0 = lerp(n00, n10, sx);
-	float ix1 = lerp(n01, n11, sx);
-
-	return lerp(ix0, ix1, sy);
+	return result;
 }
 
 
@@ -467,7 +506,7 @@ void prepareOpenGL() {
 
 	//Depth and clear.
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
+	glDepthFunc(GL_LEQUAL);
 	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
 	glClearColor(display::SKY_COLOUR.x, display::SKY_COLOUR.y, display::SKY_COLOUR.z, 1.0f);
@@ -478,8 +517,6 @@ void prepareOpenGL() {
 
 	//Alpha blending
 	glDisable(GL_BLEND);
-
-	verticalFOV = 2.0f * atan(tan(display::FOV * 0.5f) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 	
 
 	//Debug settings
