@@ -236,6 +236,9 @@ void main() {
 #if defined(HAS_WIND) && defined(DEBUG_WIND)
 	fragColour = vec4(windOffset.xy*SCALING*0.5f+0.5f, 0.0f, 1.0f);
 #else
-	fragColour = vec4(shellColour.rgb, 1.0f);
+	float distanceDecimal = distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA;
+	fragColour = vec4(mix(
+		shellColour.rgb, skyColour.rgb, distanceDecimal*distanceDecimal
+	), 1.0f);
 #endif
 }
