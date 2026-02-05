@@ -31,9 +31,6 @@
 //Include GLFW.
 #include <GLFW/glfw3.h>
 
-//Include PugiXML
-#include <pugixml.hpp>
-
 //Include std subheaders.
 #include <clocale>
 #include <bits/stdc++.h>

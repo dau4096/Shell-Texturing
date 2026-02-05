@@ -30,10 +30,9 @@ namespace constants {
 	constexpr glm::vec4 INVALIDv4 = glm::vec4(INVALID, INVALID, INVALID, INVALID);
 
 
-	constexpr float MOVE_SPEED_BASE = 0.025f;
+	constexpr float MOVE_SPEED_BASE = 0.0125f;
 	constexpr float MOVE_SPEED_CROUCH_MULT = 0.25f;
 	constexpr float MOVE_SPEED_RUN_MULT = 3.0f;
-
 	constexpr float CAMERA_TURN_SPEED = 0.125f;
 }
 
@@ -52,4 +51,6 @@ namespace dev {
 	//Assorted DEV/DEBUG constants
 	constexpr bool SHOW_FREQ_CONSOLE = false;
 	constexpr bool SHOW_VALUES = false;
+	constexpr bool CAMERA_HAS_PHYSICS = true;
+	constexpr bool CAMERA_SLOPE_SLOWDOWN = true;
 }
