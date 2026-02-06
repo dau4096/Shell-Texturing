@@ -2,53 +2,64 @@
 #define INCLUDES_H
 
 
-//OS Specific
-#ifdef _WIN32
-//Include Windows.
-#include <Windows.h> //Only for windows systems (obviously). Only needed for console-specific functions, which are minimal.
-#elif defined(__linux__)
-//Include Linux things.
-#include <unistd.h>		//Both required for the console output mode.
-#include <sys/ioctl.h>  // ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+//////// OS SPECIFIC ////////
+#if defined(_WIN32) //Windows specific headers
+    #define WIN32_LEAN_AND_MEAN //Reduces the amount of things Windows.h will try to add.
+    #include <Windows.h>
+#elif defined(__linux__) //Linux specific headers
+    #include <unistd.h>
+    #include <sys/ioctl.h>
 #endif
+//////// OS SPECIFIC ////////
 
 
 
-//Include GLEW.
+//////// OPENGL HEADERS ////////
 #include <GL/glew.h>
-
-//Include OpenGL.
 #include <GL/gl.h>
-#include <GL/glu.h>
+//////// OPENGL HEADERS ////////
 
-//Include GLM.
+
+
+//////// GLFW HEADERS ////////
+#include <GLFW/glfw3.h>
+//////// GLFW HEADERS ////////
+
+
+
+//////// GLM HEADERS ////////
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/transform.hpp>
+//////// GLM HEADERS ////////
 
-//Include GLFW.
-#include <GLFW/glfw3.h>
 
 
-//Include std subheaders.
-#include <clocale>
-#include <bits/stdc++.h>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <cstring>
+//////// C STANDARD LIBRARY HEADERS ////////
+#include <cassert>
 #include <cmath>
+#include <csignal>
+#include <cstring>
 #include <ctime>
-#include <vector>
-#include <array>
-#include <set>
-#include <unordered_map>
-#include <functional>
+//////// C STANDARD LIBRARY HEADERS ////////
+
+
+
+//////// C++ STANDARD LIBRARY HEADERS ////////
 #include <algorithm>
+#include <array>
 #include <filesystem>
-#include <signal.h>
+#include <functional>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <regex>
+#include <set>
+#include <sstream>
+#include <unordered_map>
+#include <vector>
+//////// C++ STANDARD LIBRARY HEADERS ////////
+
 
 #endif

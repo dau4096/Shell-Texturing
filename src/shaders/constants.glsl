@@ -12,9 +12,10 @@
 
 //Colour
 #define COLOUR_SCALING 6.0f
-#define COLOUR_A    vec4(0.325f, 0.375f, 0.125f, 1.0f)
-#define COLOUR_B    vec4(0.40f, 0.40f, 0.15f, 1.0f)
-#define BASE_COLOUR vec4(0.44f, 0.33f, 0.24f, 1.0f)
+#define COLOUR_A    vec3(0.325f, 0.375f, 0.125f)
+#define COLOUR_B    vec3(0.40f, 0.40f, 0.15f)
+#define BASE_COLOUR vec3(0.44f, 0.33f, 0.24f)
+#define CLOUD_COLOUR vec3(0.8f, 0.8f, 0.8f)
 #define SUN_BRIGHTNESS 1.5f
 //Colour
 

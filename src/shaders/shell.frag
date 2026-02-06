@@ -33,11 +33,7 @@ uniform float frameRate;
 void distanceFromCamera2DCulling(out float distanceFromCamera2D, inout float layerDecimal) {
 	distanceFromCamera2D = length(cameraPosition.xy - positionXY);
 	float distScaling = (1.0f - clamp(distanceFromCamera2D / MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f));
-	if (length(cameraPosition - vec3(positionXY.xy, layerHeight)) > MAX_DISTANCE_FROM_CAMERA) {
-		int maxIDX = int(floor(numLayers + FALLOFF * numLayers * (MAX_DISTANCE_FROM_CAMERA - distanceFromCamera2D)));
-		if (maxIDX < layerIndex) {discard;}
-		layerDecimal = float(layerIndex) / float(maxIDX);
-	}
+	if (length(cameraPosition - vec3(positionXY.xy, layerHeight)) > MAX_DISTANCE_FROM_CAMERA) {discard;}
 }
 
 
@@ -86,7 +82,7 @@ vec2 getWindOffset(float layerDecimal) {
 float getCloudShadow() {
 	vec2 skyPos = positionXY + SUN_DIRECTION.xy * (CLOUD_HEIGHT / SUN_DIRECTION.z);
 	float cloudValue = getCloudValueForPosition(skyPos, (frameNumber/frameRate));
-	return cloudValue * 0.333f + 0.667f;
+	return cloudValue * 0.5f + 0.5f;
 }
 
 
@@ -140,12 +136,12 @@ void main() {
 	//Combine into final colour
 	float lightMultiplier = SUN_BRIGHTNESS * ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal) * cloudEffect;
 	vec3 thisColour = mix(
-		COLOUR_A.rgb, COLOUR_B.rgb,	cPerlinRandom
+		COLOUR_A, COLOUR_B,	cPerlinRandom
 	);
-	vec3 shellColour = mix(BASE_COLOUR.rgb, thisColour.rgb, layerDecimal) * lightMultiplier;
+	vec3 shellColour = mix(BASE_COLOUR, thisColour, layerDecimal) * lightMultiplier;
 
-	float distanceDecimal = distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA;
+	float distanceDecimal = 1.0f - clamp(distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f);
 	fragColour = vec4(mix(
-		shellColour.rgb, skyColour.rgb, (distanceDecimal*distanceDecimal*distanceDecimal) //Cubed to let you see further, but not too far.
+		skyColour, shellColour, (distanceDecimal) //Cubed to let you see further, but not too far.
 	), 1.0f);
 }

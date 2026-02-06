@@ -31,7 +31,7 @@ void main() {
 #else
 	fragColour = vec4(mix(
 			skyColour,
-			vec3(1.0f, 1.0f, 1.0f),
+			CLOUD_COLOUR,
 			alpha
 		),
 		1.0f
