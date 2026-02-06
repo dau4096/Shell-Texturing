@@ -14,7 +14,7 @@ inline unsigned int frameNumber;
 
 namespace GLIndex {
 
-inline GLuint shellShader;
+inline GLuint shellShader, cloudShader;
 inline GLuint shellVAO;
 
 }
@@ -40,6 +40,6 @@ struct Camera {
 inline structs::Camera camera = structs::Camera(
 	glm::vec3(-2.0f, 0.0f, 1.0f), 	//Position
 	glm::vec2(1.57f, -0.7854f), 	//Angle
-	display::FOV, 0.1f, 32.0f, 		//FOV, zNear, zFar
+	display::FOV, 0.1f, 96.0f, 		//FOV, zNear, zFar
 	0.1875f							//Camera height over floor
 );

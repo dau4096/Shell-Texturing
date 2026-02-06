@@ -113,25 +113,58 @@ GLFWwindow* initializeWindow(int width, int height, const char* title) {
 }
 
 
+static unsigned int lineNumberAt(std::string& s, size_t pos) {
+	//Find [#line] number from position
+    return 1u + std::count(s.begin(), s.begin() + pos, '\n');
+}
+
+std::string preprocessIncludes(std::string& source, std::string& currentFile) {
+	std::regex includeRegex = std::regex(R"(^\s*#include\s*<([^>]+)>)", std::regex_constants::multiline); //Matches `#include <FILE_NAME>`, extracting FILE_NAME - must be at start of line.
+
+	std::string result = source; //If no matches are found it's unchanged.
+	std::smatch match;
+
+	//Loop through all regex results until no more remain. TECHNICALLY recursive.
+	while (std::regex_search(result, match, includeRegex)) {
+		std::string includeFile = match[1].str();
+		std::string includePath = "src/shaders/" + includeFile + ".glsl"; //Requires .glsl extension, as it isnt specificall COMP, VERT or FRAG.
+
+		std::string includedSource = utils::readFile(includePath);
+        unsigned int includeLine = lineNumberAt(result, match.position(0)); //Where did the original stop, and this get "pasted"?
+        std::string replacement = "#line 1 \"src/shaders/" + includeFile + ".glsl\"\n" + includedSource + "\n" + "#line " + std::to_string(includeLine + 1u) + " \"" + currentFile + "\"\n";
+
+		//Replace with "included" src lines, and "#line" preprocessor calls.
+		//#line tells the compiler where it should call this line, so the original file doesn't get blamed for errors in the included file.
+		result.replace(
+			match.position(0),
+			match.length(0),
+			replacement
+		);
+	}
+
+	return result;
+}
+
+
 
 GLuint compileShader(GLenum shaderType, string filePath) {
 	std::string source = utils::readFile(filePath);
+	source = preprocessIncludes(source, filePath);
 	const char* src = source.c_str();
 
-	// Create a shader object
+	//Create a shader id
 	GLuint shader = glCreateShader(shaderType);
 	if (shader == 0) {
 		raise("Error: Failed to create shader.");
 		return 0;
 	}
 
-	// Attach the shader source code to the shader object
+	//Attach the shader src
 	glShaderSource(shader, 1, &src, nullptr);
-
-	// Compile the shader
 	glCompileShader(shader);
 	
 
+	//Errorcheck
 	GLint success;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 	if (!success) {
@@ -401,6 +434,7 @@ void prepareOpenGL() {
 
 	//Voxel shader
 	GLIndex::shellShader = graphics::createShaderProgram("shell", true);
+	GLIndex::cloudShader = graphics::createShaderProgram("clouds", true);
 
 
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
@@ -410,7 +444,7 @@ void prepareOpenGL() {
 	glDepthFunc(GL_LEQUAL);
 	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
-	glClearColor(display::SKY_COLOUR.x, display::SKY_COLOUR.y, display::SKY_COLOUR.z, 1.0f);
+	glClearColor(display::SKY_COLOUR.r, display::SKY_COLOUR.g, display::SKY_COLOUR.b, 1.0f);
 
 	//Culling
 	glEnable(GL_CULL_FACE);
@@ -444,7 +478,7 @@ void draw() {
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//Voxel Shader.
+	//Shell Shader.
 	glUseProgram(GLIndex::shellShader);
 
 	//Uniforms
@@ -462,8 +496,23 @@ void draw() {
 		GL_UNSIGNED_INT, nullptr,
 		constants::NUM_LAYERS
 	);
+	utils::GLErrorcheck("Shell Shader", true);
+
+
+
+
+	//Clouds shader
+	glDisable(GL_CULL_FACE);
+	glUseProgram(GLIndex::cloudShader);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "pvmMatrix", pvmMatrix);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "frameNumber", frameNumber);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "frameRate", display::MAX_FREQ);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "skyColour", display::SKY_COLOUR);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
-	utils::GLErrorcheck("Voxel Shader", true);
+	glEnable(GL_CULL_FACE);
 }
 
 }

@@ -14,7 +14,6 @@
 
 
 
-
 //Include GLEW.
 #include <GL/glew.h>
 
@@ -30,6 +29,7 @@
 
 //Include GLFW.
 #include <GLFW/glfw3.h>
+
 
 //Include std subheaders.
 #include <clocale>
@@ -49,5 +49,6 @@
 #include <algorithm>
 #include <filesystem>
 #include <signal.h>
+#include <regex>
 
 #endif

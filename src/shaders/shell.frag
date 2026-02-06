@@ -20,135 +20,11 @@ uniform int frameNumber;
 uniform float frameRate;
 
 
-
-
-/* CONFIG */
-//Distance culling
-#define MAX_DISTANCE_FROM_CAMERA 32.0f
-#define FALLOFF 0.125f
-//Distance culling
-
-//Colour
-#define COLOUR_SCALING 6.0f
-#define COLOUR_A    vec4(0.325f, 0.375f, 0.125f, 1.0f)
-#define COLOUR_B    vec4(0.40f, 0.40f, 0.15f, 1.0f)
-#define BASE_COLOUR vec4(0.44f, 0.33f, 0.24f, 1.0f)
-#define SUN_BRIGHTNESS 1.5f
-//Colour
-
-//Wind
-#define HAS_WIND
-//#define DEBUG_WIND
-const vec2 WIND_DIRECTION = normalize(vec2(1.0f, 0.25f));
-#define WIND_STRENGTH 6.0f
-#define WIND_SPEED 0.75f
-#define MAX_WIND_DIST 1.0f
-//Wind
-
-//Cloud shadows
-#define HAS_CLOUD_SHADOWS
-//#define DEBUG_CLOUD_SHADOWS
-#define CLOUD_SPEED 2.0f
-#define CLOUD_SIZE 12.0f
-//Cloud shadows
-
-//Drawing
-#define SCALING 256.0f
-#define MIN_BLADE_HEIGHT_SCALE 0.325f
-float MIN_BLADE_HEIGHT = 0.0f;
-const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
-#define HAS_CONICAL_SHELLS
-#define CONE_RENDER_DIST 1.5f
-//Drawing
-/* CONFIG */
-
-
-
-
-
-
-
-//// PERLIN NOISE ////
-//Src: [https://github.com/stegu/webgl-noise]
-vec4 mod289(vec4 x)
-{
-	return x - floor(x * (1.0 / 289.0)) * 289.0;
-}
-
-vec4 permute(vec4 x)
-{
-	return mod289(((x*34.0)+10.0)*x);
-}
-
-vec4 taylorInvSqrt(vec4 r)
-{
-	return 1.79284291400159 - 0.85373472095314 * r;
-}
-
-vec2 fade(vec2 t) {
-	return t*t*t*(t*(t*6.0-15.0)+10.0);
-}
-
-// Classic Perlin noise
-float cnoise(vec2 P)
-{
-	vec4 Pi = floor(P.xyxy) + vec4(0.0, 0.0, 1.0, 1.0);
-	vec4 Pf = fract(P.xyxy) - vec4(0.0, 0.0, 1.0, 1.0);
-	Pi = mod289(Pi); // To avoid truncation effects in permutation
-	vec4 ix = Pi.xzxz;
-	vec4 iy = Pi.yyww;
-	vec4 fx = Pf.xzxz;
-	vec4 fy = Pf.yyww;
-
-	vec4 i = permute(permute(ix) + iy);
-
-	vec4 gx = fract(i * (1.0 / 41.0)) * 2.0 - 1.0 ;
-	vec4 gy = abs(gx) - 0.5 ;
-	vec4 tx = floor(gx + 0.5);
-	gx = gx - tx;
-
-	vec2 g00 = vec2(gx.x,gy.x);
-	vec2 g10 = vec2(gx.y,gy.y);
-	vec2 g01 = vec2(gx.z,gy.z);
-	vec2 g11 = vec2(gx.w,gy.w);
-
-	vec4 norm = taylorInvSqrt(vec4(dot(g00, g00), dot(g01, g01), dot(g10, g10), dot(g11, g11)));
-
-	float n00 = norm.x * dot(g00, vec2(fx.x, fy.x));
-	float n01 = norm.y * dot(g01, vec2(fx.z, fy.z));
-	float n10 = norm.z * dot(g10, vec2(fx.y, fy.y));
-	float n11 = norm.w * dot(g11, vec2(fx.w, fy.w));
-
-	vec2 fade_xy = fade(Pf.xy);
-	vec2 n_x = mix(vec2(n00, n01), vec2(n10, n11), fade_xy.x);
-	float n_xy = mix(n_x.x, n_x.y, fade_xy.y);
-	return 2.3 * n_xy;
-}
-//// PERLIN NOISE ////
-
-
-
-
-//// RANDOM NOISE ////
-uint pcg_hash(uint seed) {
-	/*
-	Hash function taken from;
-	https://www.reedbeta.com/blog/hash-functions-for-gpu-rendering/
-	*/
-	uint state = seed * 747796405u + 2891336453u;
-	uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-	return (word >> 22u) ^ word;
-}
-
-
-float getRandom(vec2 UV, float scale) {
-	uint seed = uint(UV.x * scale) * 73856093u ^ uint(UV.y * scale) * 19349663u;
-	return float(pcg_hash(seed)) / (pow(2.0f, 32.0f) - 1.0f);
-}
-//// RANDOM NOISE ////
-
-
-
+//Pre-processor step replaces these with the entire contents of the files "constants.glsl", "noise.glsl" and "clouds.shared.glsl".
+//Lets me share values/functions between shaders when necessary, without repeating their code.
+#include <constants>
+#include <noise>
+#include <clouds.shared>
 
 
 
@@ -170,7 +46,7 @@ void heightDiscard(
 	out float randomDecimal, out float randomHeight
 ) {
 	//Height discard.
-	randomDecimal = getRandom(abs(UV), SCALING);
+	randomDecimal = getRandom(abs(UV), SHELL_SCALING);
 	randomHeight = clamp(randomDecimal * maxHeight, 0.0f, maxHeight);
 	if (layerDelta > randomHeight) {discard; /* Shell is above top of blade of grass. */}
 	if ((randomHeight < MIN_BLADE_HEIGHT) && (layerIndex > 0)) {discard; /* Blade too short, ignore. */}
@@ -183,7 +59,7 @@ void conicalDiscard(
 ) {
 #ifdef HAS_CONICAL_SHELLS
 	if ((layerIndex > 0) && (distanceFromCamera2D < CONE_RENDER_DIST)) { //Layer 0 must be flat, and it must be only "grass" close to player.
-		vec2 localPos = fract(UV * SCALING);
+		vec2 localPos = fract(UV * SHELL_SCALING);
 		float cylDistScaling = 1.0f - (distanceFromCamera2D / CONE_RENDER_DIST);
 		float thisBladeDecimal = layerDelta / randomHeight;
 		float thisLayerRadius = 1.0f - (thisBladeDecimal * cylDistScaling);
@@ -200,7 +76,7 @@ vec2 getWindOffset(float layerDecimal) {
 		//Controls the wind waving of the grass. Uses more perlin noise, but this instance is influenced by time.
 		cnoise(positionXY+ WIND_DIRECTION*WIND_SPEED*(frameNumber/frameRate))
 	);
-	vec2 windOffset = windMult / vec2(SCALING, SCALING); //Scale to the correct size of the blades.
+	vec2 windOffset = windMult / vec2(SHELL_SCALING, SHELL_SCALING); //Scale to the correct size of the blades.
 	return windOffset;
 }
 //// SHELL TEXTURING ////
@@ -208,9 +84,9 @@ vec2 getWindOffset(float layerDecimal) {
 
 
 float getCloudShadow() {
-	return cnoise(
-		(positionXY + WIND_DIRECTION * CLOUD_SPEED * (frameNumber / frameRate)) / CLOUD_SIZE
-	) * 0.25f + 0.75f;
+	vec2 skyPos = positionXY + SUN_DIRECTION.xy * (CLOUD_HEIGHT / SUN_DIRECTION.z);
+	float cloudValue = getCloudValueForPosition(skyPos, (frameNumber/frameRate));
+	return cloudValue * 0.333f + 0.667f;
 }
 
 
@@ -240,7 +116,7 @@ void main() {
 	); //Scrolling noise wind offset. Fades at larger //distance.
 	UV += windOffset;
 	#ifdef DEBUG_WIND
-		fragColour = vec4(windOffset.xy*SCALING*0.5f+0.5f, 0.0f, 1.0f);
+		fragColour = vec4(windOffset.xy*SHELL_SCALING*0.5f+0.5f, 0.0f, 1.0f);
 		return;
 	#endif
 #endif
