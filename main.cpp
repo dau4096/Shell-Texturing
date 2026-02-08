@@ -87,7 +87,7 @@ int main() {
 	);
 
 
-	Window = graphics::initializeWindow(currentWindowResolution.x, currentWindowResolution.y, "Shell-Texturing");
+	Window = graphics::initializeWindow(currentWindowResolution.x, currentWindowResolution.y, "Shell-Texturing/main");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glfwSwapInterval(1);

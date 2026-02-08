@@ -49,7 +49,7 @@ echo
 
 #Run
 cd "$(dirname "$0")"
-./shell
+./program
 
 #Error?
 if [[ $? -ne 0 ]]; then
