@@ -21,6 +21,7 @@ namespace constants {
 	constexpr float MAX_HEIGHT = 0.0625f;
 	constexpr float LAYER_SPACING = MAX_HEIGHT / float(NUM_LAYERS);
 	constexpr glm::vec2 SCALE = glm::vec2(GRID_WIDTH/4, 2.0f);
+	constexpr unsigned int NUMBER_OF_SAMPLES = 32u;
 
 
 	//Invalid returns for vectors and floats.

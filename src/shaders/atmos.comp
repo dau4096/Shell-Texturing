@@ -1,0 +1,75 @@
+/* atmos.comp */
+#version 460 core
+
+
+uniform ivec2 resolution;
+uniform uint numberOfHemisphericalSamples; //"n" samples.
+
+uniform mat4 invProjMatrix;
+uniform mat4 invViewMatrix;
+
+struct Sample {
+	vec3 direction; //Direction to be used when sampling.
+	vec3 colour; //Colour computed for this direction.
+};
+layout(std430, binding=0) buffer sampleSSBO {
+	Sample samples[];
+};
+
+
+layout(rgba32f, binding=0) uniform image2D frameAlbedo; //Read & Write
+layout(binding=1) uniform sampler2D frameNormal; //Normal direction of this pixel.
+layout(binding=2) uniform sampler2D framePXData; //Data about this pixel.
+
+layout(local_size_x=16, local_size_y=16, local_size_z=1) in;
+
+#include <constants> //For the type name #define-s (T_TERRAIN/T_SKY/T_CLOUD)
+
+
+void main() {
+	ivec2 pixelPosition = ivec2(gl_GlobalInvocationID.xy);
+	if ((pixelPosition.x >= resolution.x) || (pixelPosition.y >= resolution.y)) {return; /* Not in valid "screenspace". */}
+
+	vec3 albedo = imageLoad(frameAlbedo, pixelPosition).rgb;
+	vec3 normal = texelFetch(frameNormal, pixelPosition, 0).xyz;
+	vec2 pxData = texelFetch(framePXData, pixelPosition, 0).rg;
+	uint type = uint(pxData.x); //Integer type.
+	float alpha = pxData.y; //Used only for clouds.
+
+	vec3 sampleDirection;
+	switch (type) {
+		case T_TERRAIN: { //Terrain pixels use terrain normals.
+			sampleDirection = normal;
+			break;
+		}
+
+		case T_SKY: { //Uses direction of pixel. Calcualted via inverse view matrix.
+			vec2 NDC = vec2(
+				((float(pixelPosition.x) + 0.5f) / float(resolution.x)) * 2.0f - 1.0f,
+				((float(pixelPosition.y) + 0.5f) / float(resolution.y)) * 2.0f - 1.0f
+			);
+			vec4 rayClip = vec4(NDC.xy, -1.0f, 1.0f); //Uses near plane.
+
+			//To viewspace.
+			vec4 rayView = invProjMatrix * rayClip;
+			rayView /= rayView.w; //Perspecitve divide.
+
+			//To worldspace.
+			sampleDirection = normalize((invViewMatrix * vec4(rayView.xyz, 0.0f)).xyz);
+			break;
+		}
+
+		case T_CLOUD: {
+			//TBA
+			sampleDirection = vec3(0.0f, 0.0f, 1.0f); //PLACEHOLDER
+			break;
+		}
+
+		default: {return; /* Invalid type, ignore. */}
+	}
+
+
+
+	imageStore(frameAlbedo, pixelPosition, vec4(sampleDirection.rgb, 1.0f)); //Store back into the frame texture.
+}
+

@@ -17,8 +17,10 @@ namespace GLIndex {
 inline GLuint shellShader, cloudShader, atmosShader, displayShader;
 inline GLuint shellVAO;
 
-inline GLuint framePXData, frameAlbedo, frameDepth;
+inline GLuint framePXData, frameAlbedo, frameNormal, frameDepth;
 inline GLuint FBO;
+
+inline GLuint samplesSSBO;
 
 }
 
@@ -36,6 +38,15 @@ struct Camera {
 		: position(position), viewAngle(angle), FOV(FOV), nearZ(nearZ), farZ(farZ), height(height), vZ(0.0f) {}
 };
 
+
+struct Sample {
+	alignas(16) glm::vec3 direction;
+	alignas(16) glm::vec3 colour;
+
+	Sample() : direction(0.0f, 0.0f, 1.0f), colour(1.0f, 0.0f, 1.0f) {}
+	Sample(glm::vec3 d, glm::vec3 c) : direction(d), colour(c) {}
+};
+
 }
 
 
@@ -46,3 +57,5 @@ inline structs::Camera camera = structs::Camera(
 	display::FOV, 0.1f, 96.0f, 		//FOV, zNear, zFar
 	0.1875f							//Camera height over floor
 );
+
+inline structs::Sample samplesDataset[constants::NUMBER_OF_SAMPLES]; //Define data later.

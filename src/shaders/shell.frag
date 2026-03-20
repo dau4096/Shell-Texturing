@@ -8,7 +8,8 @@ in vec2 layerUV;
 in vec3 normal;
 
 layout(location=0) out vec4 outAlbedo;
-layout(location=1) out vec2 outData;
+layout(location=1) out vec3 outNormal;
+layout(location=2) out vec2 outData;
 
 
 uniform float layerSpacing;
@@ -133,6 +134,7 @@ void main() {
 
 
 	//Combine into final colour
+	outNormal = normal;
 	float lightMultiplier = SUN_BRIGHTNESS * ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal) * cloudEffect;
 	vec3 thisColour = mix(
 		COLOUR_A, COLOUR_B,	cPerlinRandom

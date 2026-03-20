@@ -113,38 +113,42 @@ GLFWwindow* initializeWindow(int width, int height, const char* title) {
 }
 
 
-static unsigned int lineNumberAt(std::string& s, size_t pos) {
+static unsigned int lineNumberAt(const std::string& s, size_t pos) {
 	//Find [#line] number from position
-    return 1u + std::count(s.begin(), s.begin() + pos, '\n');
+    return std::count(s.begin(), s.begin() + pos, '\n');
 }
 
-std::string preprocessIncludes(std::string& source, std::string& currentFile) {
-	std::regex includeRegex = std::regex(R"(^\s*#include\s*<([^>]+)>)", std::regex_constants::multiline); //Matches `#include <FILE_NAME>`, extracting FILE_NAME - must be at start of line.
+std::string preprocessIncludes(const std::string& source, const std::string& currentFile) {
+    std::regex includeRegex(R"(^\s*#include\s*<([^>]+)>)", std::regex_constants::multiline);
 
-	std::string result = source; //If no matches are found it's unchanged.
-	std::smatch match;
+    std::string result;
+    std::sregex_iterator it(source.begin(), source.end(), includeRegex);
+    std::sregex_iterator end;
 
-	//Loop through all regex results until no more remain. TECHNICALLY recursive.
-	while (std::regex_search(result, match, includeRegex)) {
-		std::string includeFile = match[1].str();
-		std::string includePath = "src/shaders/" + includeFile + ".glsl"; //Requires .glsl extension, as it isnt specificall COMP, VERT or FRAG.
+    size_t lastPos = 0;
+    for (; it!=end; it++) {
+        const std::smatch& match = *it;
 
-		std::string includedSource = utils::readFile(includePath);
-        unsigned int includeLine = lineNumberAt(result, match.position(0)); //Where did the original stop, and this get "pasted"?
-        std::string replacement = "#line 1 \"src/shaders/" + includeFile + ".glsl\"\n" + includedSource + "\n" + "#line " + std::to_string(includeLine + 1u) + " \"" + currentFile + "\"\n";
+        //Copy text before include
+        result.append(source.substr(lastPos, match.position() - lastPos));
 
-		//Replace with "included" src lines, and "#line" preprocessor calls.
-		//#line tells the compiler where it should call this line, so the original file doesn't get blamed for errors in the included file.
-		result.replace(
-			match.position(0),
-			match.length(0),
-			replacement
-		);
-	}
+        std::string includeFile = match[1].str();
+        std::string includePath = "src/shaders/" + includeFile + ".glsl";
 
-	return result;
+        std::string includedSource = utils::readFile(includePath);
+
+        unsigned int includeLine = lineNumberAt(source, match.position());
+
+        result += "#line 1 \"src/shaders/"+includeFile+".glsl\"\n"+includedSource+"\n"+"#line "+std::to_string(includeLine+1u)+" \""+currentFile+"\"\n";
+
+        lastPos = match.position() + match.length();
+    }
+
+    // Append remaining source
+    result.append(source.substr(lastPos));
+
+    return result;
 }
-
 
 
 GLuint compileShader(GLenum shaderType, string filePath) {
@@ -285,14 +289,6 @@ static inline glm::mat4 viewMatrix() {
 	return glm::lookAt(camera.position, camera.position + forward, glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
-glm::mat4 getPVMMatrix() {
-	glm::mat4 pMat = projectionMatrix();
-	glm::mat4 vMat = viewMatrix();
-	glm::mat4 mMat = glm::mat4(1.0f); //Identity matrix.
-
-	return pMat * vMat * mMat;
-}
-
 
 void APIENTRY openGLErrorCallback(
 		GLenum source,
@@ -365,6 +361,61 @@ GLuint createGLImage2D(size_t width, size_t height, GLint internalFormat=GL_RGBA
 }
 
 
+GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint glType=GL_DYNAMIC_DRAW) {
+	GLuint SSBO;
+	glGenBuffers(1, &SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, nullptr, glType);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	return SSBO;
+}
+
+template<typename T>
+void updateShaderStorageBufferObject(
+	GLuint SSBO,
+	T* data,
+	size_t count
+) {
+	size_t size = sizeof(T) * count;
+
+	if (count > 0) {
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size, data);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	}
+}
+
+
+float radicalInverse(uint32_t bits) {
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u)  | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u)  | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u)  | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u)  | ((bits & 0xFF00FF00u) >> 8u);
+	return float(bits) * 2.3283064365386963e-10f; //bits / 2^32
+}
+
+void updateSamplesDataset() {
+	//Updates the dataset of samples.
+	for (int i=0; i<constants::NUMBER_OF_SAMPLES; i++) {
+		float u1 = float(i) / float(constants::NUMBER_OF_SAMPLES);
+		float u2 = radicalInverse(i);
+
+		float r = sqrt(u1);
+		float theta = constants::PI2 * u2;
+
+		float x = r * cos(theta);
+		float y = r * sin(theta);
+		float z = sqrt(1.0f - u1);
+
+		samplesDataset[i] = structs::Sample(
+			glm::vec3(x, y, z), //Direction
+			glm::vec3(x, y, z)  //Set colour to dir too for now.
+		);
+	}
+}
 
 
 std::vector<glm::vec3> singleLayerVertexArray;
@@ -472,6 +523,9 @@ GLuint getVAO(int n) {
 }
 
 
+
+GLenum shellDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+GLenum cloudDrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT2};
 void prepareOpenGL() {
 	//OpenGL setup;
 	GLIndex::shellVAO = graphics::getVAO(constants::GRID_WIDTH);
@@ -480,24 +534,34 @@ void prepareOpenGL() {
 	//Shaders
 	GLIndex::shellShader = graphics::createShaderProgram("shell", true);
 	GLIndex::cloudShader = graphics::createShaderProgram("clouds", true);
-	//GLIndex::atmosShader = graphics::createComputeShader("atmos");
+	GLIndex::atmosShader = graphics::createComputeShader("atmos"); //Compute shader.
 	GLIndex::displayShader = graphics::createShaderProgram("display", false); //No display.vert file
 
 	//Lighting data image
 	GLIndex::frameAlbedo = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y); //Frame colour values.
+	GLIndex::frameNormal = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y); //Frame normal values.
 	GLIndex::framePXData = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y, GL_RG32F); //Only 2 components. Type (int) and opacity for clouds.
+
+
+	//Samples SSBO
+	GLIndex::samplesSSBO = createShaderStorageBufferObject(
+		0, sizeof(structs::Sample) * constants::NUMBER_OF_SAMPLES
+	);
+	updateSamplesDataset();
+	updateShaderStorageBufferObject(GLIndex::samplesSSBO, samplesDataset, constants::NUMBER_OF_SAMPLES); //Must be dynamic, as it will change with time later.
+
 
 
 	//Frame FBO
 	glCreateFramebuffers(1, &GLIndex::FBO);
 	glCreateRenderbuffers(1, &GLIndex::frameDepth);
 	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT0, GLIndex::frameAlbedo, 0);
-	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT1, GLIndex::framePXData, 0);
+	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT1, GLIndex::frameNormal, 0);
+	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT2, GLIndex::framePXData, 0);
 	glNamedRenderbufferStorage(GLIndex::frameDepth, GL_DEPTH_COMPONENT24, currentRenderResolution.x, currentRenderResolution.y);
 	glNamedFramebufferRenderbuffer(GLIndex::FBO, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, GLIndex::frameDepth);
-	
-	GLenum FBOdrawbuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-	glNamedFramebufferDrawBuffers(GLIndex::FBO, 2, FBOdrawbuffers);
+
+	glNamedFramebufferDrawBuffers(GLIndex::FBO, 3, shellDrawBuffers);
 	GLenum status = glCheckNamedFramebufferStatus(GLIndex::FBO, GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE) {
 		printf("FBO incomplete! Status = 0x%x\n", status);
@@ -532,15 +596,21 @@ void prepareOpenGL() {
 
 
 void clearFrameAlbedo() {
-	const float clearValue[3] = {display::SKY_COLOUR.r, display::SKY_COLOUR.g, display::SKY_COLOUR.b};
+	const float clearValue[4] = {display::SKY_COLOUR.r, display::SKY_COLOUR.g, display::SKY_COLOUR.b, 1.0f};
 	glClearTexImage(
-	    GLIndex::frameAlbedo, 0, GL_RGBA, GL_FLOAT, clearValue
+		GLIndex::frameAlbedo, 0, GL_RGBA, GL_FLOAT, clearValue
+	);
+}
+void clearFrameNormal() {
+	const float clearValue[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+	glClearTexImage(
+		GLIndex::frameNormal, 0, GL_RGBA, GL_FLOAT, clearValue
 	);
 }
 void clearFramePXData() {
 	const float clearValue[2] = {2.0f, 0.0f};
 	glClearTexImage(
-	    GLIndex::framePXData, 0, GL_RG, GL_FLOAT, clearValue
+		GLIndex::framePXData, 0, GL_RG, GL_FLOAT, clearValue
 	);
 }
 
@@ -554,7 +624,15 @@ void clearFramePXData() {
 namespace frame {
 
 void draw() {
-	glm::mat4 pvmMatrix = graphics::getPVMMatrix();
+	glm::mat4 pMat = graphics::projectionMatrix();
+	glm::mat4 vMat = graphics::viewMatrix();
+	glm::mat4 mMat = glm::mat4(1.0f); //Identity matrix.
+	glm::mat4 pvmMatrix = pMat * vMat * mMat;
+
+	glm::mat4 invProj = glm::inverse(pMat);
+	glm::mat4 invView = glm::inverse(vMat);
+
+
 
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
@@ -564,12 +642,14 @@ void draw() {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GLIndex::FBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	graphics::clearFrameAlbedo();
+	graphics::clearFrameNormal();
 	graphics::clearFramePXData();
 
 	//Shell Shader.
 	//Shell-textured grass shader.
 	glUseProgram(GLIndex::shellShader);
 	glEnable(GL_CULL_FACE);
+	glNamedFramebufferDrawBuffers(GLIndex::FBO, 3, graphics::shellDrawBuffers);
 
 	//Uniforms
 	uniforms::bindUniformValue(GLIndex::shellShader, "pvmMatrix", pvmMatrix);
@@ -595,6 +675,7 @@ void draw() {
 	//Renders flat plane of noise at fixed dist above camera to mimic clouds.
 	glDisable(GL_CULL_FACE);
 	glUseProgram(GLIndex::cloudShader);
+	glNamedFramebufferDrawBuffers(GLIndex::FBO, 2, graphics::cloudDrawBuffers);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "pvmMatrix", pvmMatrix);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "frameNumber", frameNumber);
@@ -609,7 +690,20 @@ void draw() {
 
 	//Atmos shader
 	//Applies interpolated atmospheric light to mimic true atmospheric scattering.
-	//TBA
+	const glm::uvec3 ATMOS_LOCAL_SIZE = glm::uvec3(16u, 16u, 1u);
+	glUseProgram(GLIndex::atmosShader);
+	uniforms::bindUniformValue(GLIndex::atmosShader, "resolution", currentRenderResolution);
+	uniforms::bindUniformValue(GLIndex::atmosShader, "invProjMatrix", invProj);
+	uniforms::bindUniformValue(GLIndex::atmosShader, "invViewMatrix", invView);
+	glBindImageTexture(0, GLIndex::frameAlbedo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);	//Modifies frame data.
+	glBindTextureUnit(1, GLIndex::frameNormal);
+	glBindTextureUnit(2, GLIndex::framePXData);
+	glDispatchCompute(
+		(currentRenderResolution.x + ATMOS_LOCAL_SIZE.x - 1u) / ATMOS_LOCAL_SIZE.x,
+		(currentRenderResolution.y + ATMOS_LOCAL_SIZE.y - 1u) / ATMOS_LOCAL_SIZE.y,
+		1
+	);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
 
 
 	//Display shader

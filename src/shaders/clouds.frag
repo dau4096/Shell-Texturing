@@ -3,7 +3,7 @@
 
 in vec2 fragPosition;
 layout(location=0) out vec4 outAlbedo;
-layout(location=1) out vec2 outData;
+layout(location=2) out vec2 outData;
 
 uniform int frameNumber;
 uniform float frameRate;
