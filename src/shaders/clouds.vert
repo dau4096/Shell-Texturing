@@ -24,7 +24,7 @@ void main() {
 
 	vec3 aPos = vec3(
 		(vertices[gl_VertexID].xy * CLOUD_QUAD_SIZE) + cameraPosition.xy, //Scale to the correct size, centre on camera pos.
-		CLOUD_HEIGHT
+		CLOUD_HEIGHT + cameraPosition.z
 	);
 	gl_Position = pvmMatrix * vec4(aPos, 1.0f);
 	fragPosition = (aPos - cameraPosition).xy; //Moves horizontally with camera to fake lack of perspective.

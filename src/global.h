@@ -14,8 +14,11 @@ inline unsigned int frameNumber;
 
 namespace GLIndex {
 
-inline GLuint shellShader, cloudShader;
+inline GLuint shellShader, cloudShader, atmosShader, displayShader;
 inline GLuint shellVAO;
+
+inline GLuint framePXData, frameAlbedo, frameDepth;
+inline GLuint FBO;
 
 }
 

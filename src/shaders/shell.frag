@@ -7,9 +7,8 @@ in float layerHeight;
 in vec2 layerUV;
 in vec3 normal;
 
-out vec4 fragColour;
-
-
+layout(location=0) out vec4 outAlbedo;
+layout(location=1) out vec2 outData;
 
 
 uniform float layerSpacing;
@@ -25,7 +24,6 @@ uniform float frameRate;
 #include <constants>
 #include <noise>
 #include <clouds.shared>
-
 
 
 
@@ -90,6 +88,7 @@ float getCloudShadow() {
 
 
 void main() {
+	outData = vec2(T_TERRAIN, 0.0f); //Write that it was a terrain collis.
 
 	//Initial setup of values
 	vec2 UV = layerUV;
@@ -112,7 +111,7 @@ void main() {
 	); //Scrolling noise wind offset. Fades at larger //distance.
 	UV += windOffset;
 	#ifdef DEBUG_WIND
-		fragColour = vec4(windOffset.xy*SHELL_SCALING*0.5f+0.5f, 0.0f, 1.0f);
+		outAlbedo = vec4(windOffset.xy*SHELL_SCALING*0.5f+0.5f, 0.0f, 1.0f);
 		return;
 	#endif
 #endif
@@ -127,7 +126,7 @@ void main() {
 #ifdef HAS_CLOUD_SHADOWS
 	float cloudEffect = getCloudShadow(); //Scrolling cloud shadow noise over terrain.
 	#ifdef DEBUG_CLOUD_SHADOWS
-		fragColour = vec4(cloudEffect, (cloudEffect-0.625f)/0.375f, 0.0f, 1.0f);
+		outAlbedo = vec4(cloudEffect, (cloudEffect-0.625f)/0.375f, 0.0f, 1.0f);
 		return;
 	#endif
 #endif
@@ -141,7 +140,8 @@ void main() {
 	vec3 shellColour = mix(BASE_COLOUR, thisColour, layerDecimal) * lightMultiplier;
 
 	float distanceDecimal = 1.0f - clamp(distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f);
-	fragColour = vec4(mix(
+	outAlbedo = vec4(mix(
 		skyColour, shellColour, (distanceDecimal) //Cubed to let you see further, but not too far.
 	), 1.0f);
+
 }

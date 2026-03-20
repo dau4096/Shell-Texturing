@@ -213,6 +213,31 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 
 
 
+GLuint createComputeShader(std::string compShaderName) {
+	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName + ".comp");
+
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, computeShader);
+	glLinkProgram(shaderProgram);
+
+	GLint success;
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success) {
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
+		char infolog[512];
+		glGetProgramInfoLog(shaderProgram, 512, nullptr, infolog);
+		raise("Error: Compute shader program linking failed:\n" + std::string(infolog));
+	}
+
+	glDeleteShader(computeShader);
+
+	return shaderProgram;
+}
+
+
+
 static glm::mat4 getModelMat4(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale) {
 	glm::mat4 translationMat = glm::mat4(
 		1.0f, 	0.0f, 	0.0f, 	pos.x,
@@ -317,6 +342,26 @@ void APIENTRY openGLErrorCallback(
 	std::cout << std::endl;
 
 	utils::pause();
+}
+
+
+
+
+GLuint createGLImage2D(size_t width, size_t height, GLint internalFormat=GL_RGBA32F, GLint samplingType=GL_NEAREST, GLint edgeSampling=GL_REPEAT) {
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, width, height);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, samplingType);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, samplingType);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	return textureID;
 }
 
 
@@ -432,12 +477,32 @@ void prepareOpenGL() {
 	GLIndex::shellVAO = graphics::getVAO(constants::GRID_WIDTH);
 
 
-	//Voxel shader
+	//Shaders
 	GLIndex::shellShader = graphics::createShaderProgram("shell", true);
 	GLIndex::cloudShader = graphics::createShaderProgram("clouds", true);
+	//GLIndex::atmosShader = graphics::createComputeShader("atmos");
+	GLIndex::displayShader = graphics::createShaderProgram("display", false); //No display.vert file
+
+	//Lighting data image
+	GLIndex::frameAlbedo = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y); //Frame colour values.
+	GLIndex::framePXData = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y, GL_RG32F); //Only 2 components. Type (int) and opacity for clouds.
 
 
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+	//Frame FBO
+	glCreateFramebuffers(1, &GLIndex::FBO);
+	glCreateRenderbuffers(1, &GLIndex::frameDepth);
+	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT0, GLIndex::frameAlbedo, 0);
+	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT1, GLIndex::framePXData, 0);
+	glNamedRenderbufferStorage(GLIndex::frameDepth, GL_DEPTH_COMPONENT24, currentRenderResolution.x, currentRenderResolution.y);
+	glNamedFramebufferRenderbuffer(GLIndex::FBO, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, GLIndex::frameDepth);
+	
+	GLenum FBOdrawbuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+	glNamedFramebufferDrawBuffers(GLIndex::FBO, 2, FBOdrawbuffers);
+	GLenum status = glCheckNamedFramebufferStatus(GLIndex::FBO, GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE) {
+		printf("FBO incomplete! Status = 0x%x\n", status);
+	}
+
 
 	//Depth and clear.
 	glEnable(GL_DEPTH_TEST);
@@ -464,6 +529,23 @@ void prepareOpenGL() {
 }
 
 
+
+
+void clearFrameAlbedo() {
+	const float clearValue[3] = {display::SKY_COLOUR.r, display::SKY_COLOUR.g, display::SKY_COLOUR.b};
+	glClearTexImage(
+	    GLIndex::frameAlbedo, 0, GL_RGBA, GL_FLOAT, clearValue
+	);
+}
+void clearFramePXData() {
+	const float clearValue[2] = {2.0f, 0.0f};
+	glClearTexImage(
+	    GLIndex::framePXData, 0, GL_RG, GL_FLOAT, clearValue
+	);
+}
+
+
+
 }
 
 
@@ -475,11 +557,19 @@ void draw() {
 	glm::mat4 pvmMatrix = graphics::getPVMMatrix();
 
 	//Update resolution
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
+
+
+	//Clear lighting data texture, and start using frame FBO.
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GLIndex::FBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	graphics::clearFrameAlbedo();
+	graphics::clearFramePXData();
 
 	//Shell Shader.
+	//Shell-textured grass shader.
 	glUseProgram(GLIndex::shellShader);
+	glEnable(GL_CULL_FACE);
 
 	//Uniforms
 	uniforms::bindUniformValue(GLIndex::shellShader, "pvmMatrix", pvmMatrix);
@@ -502,6 +592,7 @@ void draw() {
 
 
 	//Clouds shader
+	//Renders flat plane of noise at fixed dist above camera to mimic clouds.
 	glDisable(GL_CULL_FACE);
 	glUseProgram(GLIndex::cloudShader);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "pvmMatrix", pvmMatrix);
@@ -510,9 +601,30 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::cloudShader, "frameRate", display::MAX_FREQ);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "skyColour", display::SKY_COLOUR);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindTextureUnit(0, GLIndex::framePXData); //Previous pass's framePXData
+
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Uses vertices defined in vertex shader.
+	utils::GLErrorcheck("Cloud Shader", true);
+
+
+	//Atmos shader
+	//Applies interpolated atmospheric light to mimic true atmospheric scattering.
+	//TBA
+
+
+	//Display shader
+	//Displays frame to the screen.
+	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+	glUseProgram(GLIndex::displayShader);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); //Back to default FBO.
+	glBindTextureUnit(0, GLIndex::frameAlbedo); //Has since been modified by "atmos" shader.
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Screenspace
+	
+	//Cleanup.
 	glBindVertexArray(0);
-	glEnable(GL_CULL_FACE);
+	glUseProgram(0);
+
+	utils::GLErrorcheck("Display Shader", true);
 }
 
 }

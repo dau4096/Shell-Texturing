@@ -40,6 +40,7 @@ const vec2 WIND_DIRECTION = normalize(vec2(1.0f, 0.25f));
 #define CLOUD_NOISE_SIZE 12.0f
 #define CLOUD_MIN_VALUE 0.0f
 #define CLOUD_MAX_VALUE 0.5f
+#define CLOUD_EPSILON 0.025f
 //Clouds
 
 
@@ -51,4 +52,10 @@ const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define HAS_CONICAL_SHELLS
 #define CONE_RENDER_DIST 1.5f
 //Drawing
+
+//Lighting
+#define T_TERRAIN 1u
+#define T_SKY 2u
+#define T_CLOUD 3u
+//Lighting
 /* CONFIG */
