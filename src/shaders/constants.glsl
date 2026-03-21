@@ -53,9 +53,15 @@ const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define CONE_RENDER_DIST 1.5f
 //Drawing
 
+
 //Lighting
 #define T_TERRAIN 1u
 #define T_SKY 2u
 #define T_CLOUD 3u
 //Lighting
+
+
+//General
+#define PI 3.141593
+//General
 /* CONFIG */

@@ -108,46 +108,46 @@ GLFWwindow* initializeWindow(int width, int height, const char* title) {
 		raise("Failed to initialize GLEW.");
 	}
 
-	glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	return Window;
 }
 
 
 static unsigned int lineNumberAt(const std::string& s, size_t pos) {
 	//Find [#line] number from position
-    return std::count(s.begin(), s.begin() + pos, '\n');
+	return std::count(s.begin(), s.begin() + pos, '\n');
 }
 
 std::string preprocessIncludes(const std::string& source, const std::string& currentFile) {
-    std::regex includeRegex(R"(^\s*#include\s*<([^>]+)>)", std::regex_constants::multiline);
+	std::regex includeRegex(R"(^\s*#include\s*<([^>]+)>)", std::regex_constants::multiline);
 
-    std::string result;
-    std::sregex_iterator it(source.begin(), source.end(), includeRegex);
-    std::sregex_iterator end;
+	std::string result;
+	std::sregex_iterator it(source.begin(), source.end(), includeRegex);
+	std::sregex_iterator end;
 
-    size_t lastPos = 0;
-    for (; it!=end; it++) {
-        const std::smatch& match = *it;
+	size_t lastPos = 0;
+	for (; it!=end; it++) {
+		const std::smatch& match = *it;
 
-        //Copy text before include
-        result.append(source.substr(lastPos, match.position() - lastPos));
+		//Copy text before include
+		result.append(source.substr(lastPos, match.position() - lastPos));
 
-        std::string includeFile = match[1].str();
-        std::string includePath = "src/shaders/" + includeFile + ".glsl";
+		std::string includeFile = match[1].str();
+		std::string includePath = "src/shaders/" + includeFile + ".glsl";
 
-        std::string includedSource = utils::readFile(includePath);
+		std::string includedSource = utils::readFile(includePath);
 
-        unsigned int includeLine = lineNumberAt(source, match.position());
+		unsigned int includeLine = lineNumberAt(source, match.position());
 
-        result += "#line 1 \"src/shaders/"+includeFile+".glsl\"\n"+includedSource+"\n"+"#line "+std::to_string(includeLine+1u)+" \""+currentFile+"\"\n";
+		result += "#line 1 \"src/shaders/"+includeFile+".glsl\"\n"+includedSource+"\n"+"#line "+std::to_string(includeLine+1u)+" \""+currentFile+"\"\n";
 
-        lastPos = match.position() + match.length();
-    }
+		lastPos = match.position() + match.length();
+	}
 
-    // Append remaining source
-    result.append(source.substr(lastPos));
+	// Append remaining source
+	result.append(source.substr(lastPos));
 
-    return result;
+	return result;
 }
 
 
@@ -388,32 +388,74 @@ void updateShaderStorageBufferObject(
 }
 
 
-float radicalInverse(uint32_t bits) {
-	bits = (bits << 16u) | (bits >> 16u);
-	bits = ((bits & 0x55555555u) << 1u)  | ((bits & 0xAAAAAAAAu) >> 1u);
-	bits = ((bits & 0x33333333u) << 2u)  | ((bits & 0xCCCCCCCCu) >> 2u);
-	bits = ((bits & 0x0F0F0F0Fu) << 4u)  | ((bits & 0xF0F0F0F0u) >> 4u);
-	bits = ((bits & 0x00FF00FFu) << 8u)  | ((bits & 0xFF00FF00u) >> 8u);
-	return float(bits) * 2.3283064365386963e-10f; //bits / 2^32
+
+void createSamplesDataset() {
+	unsigned int datasetIdx = 0u;
+
+	ringCount = static_cast<int>(sqrt(constants::NUMBER_OF_SAMPLES) / 1.5f);
+	samplesDataset[datasetIdx++].direction = glm::vec3(0.0f, 0.0f, 1.0f); //Add top Sample.
+	float sumSineThetaI = 0.0f; //Find Σ[sin(Θi)]
+	for (int ringIdx = 1; ringIdx <= ringCount; ringIdx++) {
+		float thetaI = (ringIdx / static_cast<float>(ringCount)) * (constants::PI / 2.0f);
+		sumSineThetaI += sin(thetaI);
+	}
+
+	float K = (constants::NUMBER_OF_SAMPLES - 1) / sumSineThetaI;
+	std::vector<int> ringCounts = std::vector<int>(ringCount);
+
+	int total = 1;
+	for (int ringIdx=1; ringIdx<=ringCount; ringIdx++) {
+		float t = ringIdx / static_cast<float>(ringCount);
+		float thetaI = pow(t, 1.2f) * (constants::PI / 2.0f);
+		int nI = static_cast<int>(round(K * sin(thetaI)));
+		nI = std::max(nI, 3);
+		ringCounts[ringIdx - 1] = nI; //Store to be referenced later.
+		total += nI;
+	}
+
+	while (total < constants::NUMBER_OF_SAMPLES) {
+		ringCounts.back()++; //Add more vertices to the biggest ring until it matches NUMBER_OF_SAMPLES
+		total++;
+	}
+	while (total > constants::NUMBER_OF_SAMPLES) {
+		if (ringCounts.back() > 3) {
+			ringCounts.back()--;
+			total--;
+		} else {
+			break;
+		}
+	}
+
+	for (int ringIdx=1; ringIdx<=ringCount; ringIdx++) {
+		float thetaI = (ringIdx / static_cast<float>(ringCount)) * (constants::PI / 2.0f);
+		int nI = ringCounts[ringIdx - 1];
+
+		float z = cos(thetaI);
+		float rC = sin(thetaI);
+
+		for (int ptIdx=0; ptIdx<nI; ptIdx++) {
+			float phi = constants::PI2 * ptIdx / static_cast<float>(nI);
+
+			samplesDataset[datasetIdx++].direction = glm::normalize(glm::vec3(
+				rC * cos(phi), rC * sin(phi), z
+			));
+		}
+	}
+
+	//Add to ring dataset.
+	int offset = 0;
+	for (int count : ringCounts) {
+		ringDataset.push_back(glm::ivec2(
+			count, offset //Number of samples in this ring, offset, 2 padding floats.
+		));
+		offset += count;
+	}
 }
 
 void updateSamplesDataset() {
 	//Updates the dataset of samples.
-	for (int i=0; i<constants::NUMBER_OF_SAMPLES; i++) {
-		float u1 = float(i) / float(constants::NUMBER_OF_SAMPLES);
-		float u2 = radicalInverse(i);
-
-		float r = sqrt(u1);
-		float theta = constants::PI2 * u2;
-
-		float x = r * cos(theta);
-		float y = r * sin(theta);
-		float z = sqrt(1.0f - u1);
-
-		samplesDataset[i] = structs::Sample(
-			glm::vec3(x, y, z), //Direction
-			glm::vec3(x, y, z)  //Set colour to dir too for now.
-		);
+	for (structs::Sample& sample : samplesDataset) {
+		sample.colour = sample.direction; //Temporary for debug.
 	}
 }
 
@@ -547,9 +589,15 @@ void prepareOpenGL() {
 	GLIndex::samplesSSBO = createShaderStorageBufferObject(
 		0, sizeof(structs::Sample) * constants::NUMBER_OF_SAMPLES
 	);
+	createSamplesDataset();
 	updateSamplesDataset();
 	updateShaderStorageBufferObject(GLIndex::samplesSSBO, samplesDataset, constants::NUMBER_OF_SAMPLES); //Must be dynamic, as it will change with time later.
 
+	//RingData SSBO
+	GLIndex::ringDataSSBO = createShaderStorageBufferObject(
+		1, sizeof(glm::ivec2) * ringDataset.size()
+	);
+	updateShaderStorageBufferObject(GLIndex::ringDataSSBO, &(ringDataset[0]), ringDataset.size());
 
 
 	//Frame FBO
@@ -695,6 +743,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::atmosShader, "resolution", currentRenderResolution);
 	uniforms::bindUniformValue(GLIndex::atmosShader, "invProjMatrix", invProj);
 	uniforms::bindUniformValue(GLIndex::atmosShader, "invViewMatrix", invView);
+	uniforms::bindUniformValue(GLIndex::atmosShader, "numberOfRings", ringCount);
 	glBindImageTexture(0, GLIndex::frameAlbedo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);	//Modifies frame data.
 	glBindTextureUnit(1, GLIndex::frameNormal);
 	glBindTextureUnit(2, GLIndex::framePXData);

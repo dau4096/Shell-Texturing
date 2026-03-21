@@ -11,6 +11,8 @@ inline std::unordered_map<int, bool> keyMap;
 inline float verticalFOV;
 inline unsigned int frameNumber;
 
+inline int ringCount;
+
 
 namespace GLIndex {
 
@@ -20,7 +22,7 @@ inline GLuint shellVAO;
 inline GLuint framePXData, frameAlbedo, frameNormal, frameDepth;
 inline GLuint FBO;
 
-inline GLuint samplesSSBO;
+inline GLuint samplesSSBO, ringDataSSBO;
 
 }
 
@@ -58,4 +60,5 @@ inline structs::Camera camera = structs::Camera(
 	0.1875f							//Camera height over floor
 );
 
-inline structs::Sample samplesDataset[constants::NUMBER_OF_SAMPLES]; //Define data later.
+inline structs::Sample samplesDataset[constants::NUMBER_OF_SAMPLES];
+inline std::vector<glm::ivec2> ringDataset;
