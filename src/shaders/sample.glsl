@@ -105,6 +105,7 @@ void getVerticesHorizontal(in vec3 sampleDir, out int i[2], out float frac) {
 
 Sample sampleHemisphere(vec3 sampleDir) {
 	int indices[3];
+	sampleDir.z = abs(sampleDir.z);
 	getVertices(sampleDir, indices);
 
 	//Find closest sample to query.

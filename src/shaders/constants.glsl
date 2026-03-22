@@ -58,6 +58,7 @@ const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define T_TERRAIN 1u
 #define T_SKY 2u
 #define T_CLOUD 3u
+#define BRIGHTNESS_MODIFIER 3.5f
 //Lighting
 
 

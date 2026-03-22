@@ -21,6 +21,6 @@ void main() {
 	layerHeight = zOffset + aPosition.z;
 	gl_Position = pvmMatrix * vec4(positionXY, layerHeight, 1.0f);
 	layerUV = aPosition.xy;
-	normal = aNormal;
+	normal = normalize(aNormal);
 
 }

@@ -136,7 +136,7 @@ void main() {
 
 
 	//Combine into final colour
-	float lightMultiplier = SUN_BRIGHTNESS * ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal) * cloudEffect;
+	vec3 lightMultiplier = sampleHemisphereHorizontal(normal) * ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal) * cloudEffect * BRIGHTNESS_MODIFIER;
 	vec3 thisColour = mix(
 		COLOUR_A, COLOUR_B,	cPerlinRandom
 	);
@@ -148,7 +148,7 @@ void main() {
 	);
 	vec3 skyColour = sampleHemisphereHorizontal(direction);
 	fragColour = vec4(mix(
-		skyColour, shellColour, (distanceDecimal) //Cubed to let you see further, but not too far.
+		skyColour, shellColour, distanceDecimal
 	), 1.0f);
 
 }

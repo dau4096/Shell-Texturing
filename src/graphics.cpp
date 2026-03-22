@@ -572,7 +572,8 @@ void createSamplesIndices() {
 void updateSamplesDataset() {
 	//Updates the dataset of samples.
 	for (structs::Sample& sample : samplesDataset) {
-		sample.colour = sample.direction; //DEBUG
+		//sample.colour = sample.direction; //DEBUG
+		sample.colour = display::SKY_COLOUR;
 	}
 
 	//Update the actual SSBO.
