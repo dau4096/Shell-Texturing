@@ -19,11 +19,6 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 		glm::min(width, desiredRenderResolution.x),
 		glm::min(height, desiredRenderResolution.y)
 	);
-
-	//Remake with new res.
-	GLIndex::frameAlbedo = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y); //Frame colour values.
-	GLIndex::frameNormal = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y); //Frame normal values.
-	GLIndex::framePXData = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y, GL_RG32F); //Only 2 components. Type (int) and opacity for clouds.
 }
 
 
