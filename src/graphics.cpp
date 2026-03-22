@@ -396,7 +396,8 @@ void createSamplesDataset() {
 	samplesDataset[datasetIdx++].direction = glm::vec3(0.0f, 0.0f, 1.0f); //Add top Sample.
 	float sumSineThetaI = 0.0f; //Find Σ[sin(Θi)]
 	for (int ringIdx = 1; ringIdx <= ringCount; ringIdx++) {
-		float thetaI = (ringIdx / static_cast<float>(ringCount)) * (constants::PI / 2.0f);
+		float t = ringIdx / static_cast<float>(ringCount);
+		float thetaI = pow(t, 1.2f) * (constants::PI / 2.0f);
 		sumSineThetaI += sin(thetaI);
 	}
 
@@ -427,7 +428,8 @@ void createSamplesDataset() {
 	}
 
 	for (int ringIdx=1; ringIdx<=ringCount; ringIdx++) {
-		float thetaI = (ringIdx / static_cast<float>(ringCount)) * (constants::PI / 2.0f);
+		float t = ringIdx / static_cast<float>(ringCount);
+		float thetaI = pow(t, 1.2f) * (constants::PI / 2.0f);
 		int nI = ringCounts[ringIdx - 1];
 
 		float z = cos(thetaI);
@@ -446,10 +448,125 @@ void createSamplesDataset() {
 	int offset = 0;
 	for (int count : ringCounts) {
 		ringDataset.push_back(glm::ivec2(
-			count, offset //Number of samples in this ring, offset, 2 padding floats.
+			count, offset //Number of samples in this ring, offset
 		));
 		offset += count;
 	}
+}
+
+
+void createSamplesEBO() {
+	//Indices buffer (EBO)
+	glGenBuffers(1, &GLIndex::sampleEBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GLIndex::sampleEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sampleIndices.size() * sizeof(uint32_t), sampleIndices.data(), GL_STATIC_DRAW);
+
+	//VAO to contain EBO.
+	glGenVertexArrays(1, &GLIndex::sampleVAO);
+	glBindVertexArray(GLIndex::sampleVAO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GLIndex::sampleEBO);
+	glBindVertexArray(0);
+}
+
+
+void stitchRings(
+	int offsetA, int nA,
+	int offsetB, int nB,
+	std::vector<int>& indices
+) {
+	int i = 0; //A index
+	int j = 0; //B index
+
+	while ((i < nA) || (j < nB)) {
+		float tA = (i + 1) / static_cast<float>(nA);
+		float tB = (j + 1) / static_cast<float>(nB);
+
+		int a0 = offsetA + (i % nA);
+		int a1 = offsetA + ((i + 1) % nA);
+
+		int b0 = offsetB + (j % nB);
+		int b1 = offsetB + ((j + 1) % nB);
+
+		if (tA < tB) {
+			//Triangle A was closer.
+			indices.push_back(a0+1);
+			indices.push_back(b0+1);
+			indices.push_back(a1+1);
+			i++;
+		} else {
+			//Triangle B was closer.
+			indices.push_back(a0+1);
+			indices.push_back(b0+1);
+			indices.push_back(b1+1);
+			j++;
+		}
+	}
+}
+
+void createSamplesIndices() {
+	sampleIndices.clear();
+
+	//For ring 0 (Uses top vertex.)
+	for (int i=0; i<ringDataset[0].x; i++) {
+		int next = (i + 1) % ringDataset[0].x;
+
+		sampleIndices.push_back(0); //Top vertex.
+		sampleIndices.push_back(1 + next);
+		sampleIndices.push_back(1 + i);
+	}
+
+
+	//For all other rings.
+	for (int r=0; r<ringDataset.size()-1; r++) {
+		int nA = ringDataset[r].x;
+		int offsetA = ringDataset[r].y;
+
+		int nB = ringDataset[r+1].x;
+		int offsetB = ringDataset[r+1].y;
+
+		//Get indices for this ring pair.
+		stitchRings(
+			offsetA, nA,
+			offsetB, nB,
+			sampleIndices
+		);
+
+		//Fill the gap.
+		sampleIndices.push_back(offsetA);
+		sampleIndices.push_back(offsetA+nA);
+		sampleIndices.push_back(offsetB);
+	}
+
+
+	//Close the final triangle of the final layer.
+	int r = ringDataset.size()-1;
+	glm::ivec2 A = ringDataset[r]; //Last ring
+	glm::ivec2 B = ringDataset[r-1]; //2nd-last ring.
+
+	int aLast = A.y + ((A.x - 1) % A.x);
+	int aFirst = A.y;
+
+	int bLast = B.y + ((B.x - 1) % B.x);
+	int bFirst = B.y;
+
+	sampleIndices.push_back(aLast);
+	sampleIndices.push_back(bLast);
+	sampleIndices.push_back(aFirst);
+
+	//Later.
+	for (int index=1; index<=A.x; index++) {
+		//For all samples in the final ring, join to a fake pseudo-sample in a cone shape.
+		sampleIndices.push_back(A.y + index);
+		sampleIndices.push_back(A.y + (index+1 % A.x));
+		sampleIndices.push_back(sampleIndices.size()); //Fake vertex.
+	}
+	//Final triangle to close off the lower cone.
+	sampleIndices.push_back(A.y + 1);
+	sampleIndices.push_back(A.y + A.x);
+	sampleIndices.push_back(sampleIndices.size());
+
+
+	createSamplesEBO();
 }
 
 void updateSamplesDataset() {
@@ -576,13 +693,8 @@ void prepareOpenGL() {
 	//Shaders
 	GLIndex::shellShader = graphics::createShaderProgram("shell", true);
 	GLIndex::cloudShader = graphics::createShaderProgram("clouds", true);
-	GLIndex::atmosShader = graphics::createComputeShader("atmos"); //Compute shader.
+	GLIndex::skyShader = graphics::createShaderProgram("sky", true);
 	GLIndex::displayShader = graphics::createShaderProgram("display", false); //No display.vert file
-
-	//Lighting data image
-	GLIndex::frameAlbedo = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y); //Frame colour values.
-	GLIndex::frameNormal = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y); //Frame normal values.
-	GLIndex::framePXData = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y, GL_RG32F); //Only 2 components. Type (int) and opacity for clouds.
 
 
 	//Samples SSBO
@@ -592,28 +704,7 @@ void prepareOpenGL() {
 	createSamplesDataset();
 	updateSamplesDataset();
 	updateShaderStorageBufferObject(GLIndex::samplesSSBO, samplesDataset, constants::NUMBER_OF_SAMPLES); //Must be dynamic, as it will change with time later.
-
-	//RingData SSBO
-	GLIndex::ringDataSSBO = createShaderStorageBufferObject(
-		1, sizeof(glm::ivec2) * ringDataset.size()
-	);
-	updateShaderStorageBufferObject(GLIndex::ringDataSSBO, &(ringDataset[0]), ringDataset.size());
-
-
-	//Frame FBO
-	glCreateFramebuffers(1, &GLIndex::FBO);
-	glCreateRenderbuffers(1, &GLIndex::frameDepth);
-	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT0, GLIndex::frameAlbedo, 0);
-	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT1, GLIndex::frameNormal, 0);
-	glNamedFramebufferTexture(GLIndex::FBO, GL_COLOR_ATTACHMENT2, GLIndex::framePXData, 0);
-	glNamedRenderbufferStorage(GLIndex::frameDepth, GL_DEPTH_COMPONENT24, currentRenderResolution.x, currentRenderResolution.y);
-	glNamedFramebufferRenderbuffer(GLIndex::FBO, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, GLIndex::frameDepth);
-
-	glNamedFramebufferDrawBuffers(GLIndex::FBO, 3, shellDrawBuffers);
-	GLenum status = glCheckNamedFramebufferStatus(GLIndex::FBO, GL_FRAMEBUFFER);
-	if (status != GL_FRAMEBUFFER_COMPLETE) {
-		printf("FBO incomplete! Status = 0x%x\n", status);
-	}
+	createSamplesIndices();
 
 
 	//Depth and clear.
@@ -628,7 +719,8 @@ void prepareOpenGL() {
 	glCullFace(GL_BACK);
 
 	//Alpha blending
-	glDisable(GL_BLEND);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 
 	//Debug settings
@@ -643,25 +735,15 @@ void prepareOpenGL() {
 
 
 
-void clearFrameAlbedo() {
-	const float clearValue[4] = {display::SKY_COLOUR.r, display::SKY_COLOUR.g, display::SKY_COLOUR.b, 1.0f};
-	glClearTexImage(
-		GLIndex::frameAlbedo, 0, GL_RGBA, GL_FLOAT, clearValue
+glm::mat4 getSkyModelMatrix() {
+	return glm::scale(
+		glm::translate(
+			glm::mat4(1.0f), //Start with identity.
+			camera.position //Inverse camera translation, to centre on camera.
+		),
+		glm::vec3(camera.farZ) //Scale it up to be very large.
 	);
 }
-void clearFrameNormal() {
-	const float clearValue[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-	glClearTexImage(
-		GLIndex::frameNormal, 0, GL_RGBA, GL_FLOAT, clearValue
-	);
-}
-void clearFramePXData() {
-	const float clearValue[2] = {2.0f, 0.0f};
-	glClearTexImage(
-		GLIndex::framePXData, 0, GL_RG, GL_FLOAT, clearValue
-	);
-}
-
 
 
 }
@@ -674,33 +756,34 @@ namespace frame {
 void draw() {
 	glm::mat4 pMat = graphics::projectionMatrix();
 	glm::mat4 vMat = graphics::viewMatrix();
-	glm::mat4 mMat = glm::mat4(1.0f); //Identity matrix.
-	glm::mat4 pvmMatrix = pMat * vMat * mMat;
-
-	glm::mat4 invProj = glm::inverse(pMat);
-	glm::mat4 invView = glm::inverse(vMat);
+	glm::mat4 cameraPVMmatrix = pMat * vMat; // * glm::mat4(1.0f); //Model is identity matrix. Commented out as the operation does nothing.
+	glm::mat4 skyPVMmatrix = cameraPVMmatrix * graphics::getSkyModelMatrix(); //Uses scale & translation.
 
 
+	//Update resolution & clear
+	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//Update resolution
-	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 
 
-	//Clear lighting data texture, and start using frame FBO.
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GLIndex::FBO);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	graphics::clearFrameAlbedo();
-	graphics::clearFrameNormal();
-	graphics::clearFramePXData();
+	//Sky shader
+	//Draws a hemisphere of triangles with interpolated colour.
+	glUseProgram(GLIndex::skyShader);
+	uniforms::bindUniformValue(GLIndex::skyShader, "pvmMatrix", skyPVMmatrix);
+	uniforms::bindUniformValue(GLIndex::skyShader, "numberOfSamples", constants::NUMBER_OF_SAMPLES);
+	glBindVertexArray(GLIndex::sampleVAO);
+	glDrawElements(GL_TRIANGLES, sampleIndices.size(), GL_UNSIGNED_INT, 0);
+
+
+
 
 	//Shell Shader.
 	//Shell-textured grass shader.
 	glUseProgram(GLIndex::shellShader);
 	glEnable(GL_CULL_FACE);
-	glNamedFramebufferDrawBuffers(GLIndex::FBO, 3, graphics::shellDrawBuffers);
 
 	//Uniforms
-	uniforms::bindUniformValue(GLIndex::shellShader, "pvmMatrix", pvmMatrix);
+	uniforms::bindUniformValue(GLIndex::shellShader, "pvmMatrix", cameraPVMmatrix);
 	uniforms::bindUniformValue(GLIndex::shellShader, "layerSpacing", constants::LAYER_SPACING);
 	uniforms::bindUniformValue(GLIndex::shellShader, "numLayers", constants::NUM_LAYERS);
 	uniforms::bindUniformValue(GLIndex::shellShader, "cameraPosition", camera.position);
@@ -723,45 +806,18 @@ void draw() {
 	//Renders flat plane of noise at fixed dist above camera to mimic clouds.
 	glDisable(GL_CULL_FACE);
 	glUseProgram(GLIndex::cloudShader);
-	glNamedFramebufferDrawBuffers(GLIndex::FBO, 2, graphics::cloudDrawBuffers);
-	uniforms::bindUniformValue(GLIndex::cloudShader, "pvmMatrix", pvmMatrix);
+	//glNamedFramebufferDrawBuffers(GLIndex::FBO, 2, graphics::cloudDrawBuffers);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "pvmMatrix", cameraPVMmatrix);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "frameNumber", frameNumber);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "frameRate", display::MAX_FREQ);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "skyColour", display::SKY_COLOUR);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
-	glBindTextureUnit(0, GLIndex::framePXData); //Previous pass's framePXData
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Uses vertices defined in vertex shader.
 	utils::GLErrorcheck("Cloud Shader", true);
 
 
-	//Atmos shader
-	//Applies interpolated atmospheric light to mimic true atmospheric scattering.
-	const glm::uvec3 ATMOS_LOCAL_SIZE = glm::uvec3(16u, 16u, 1u);
-	glUseProgram(GLIndex::atmosShader);
-	uniforms::bindUniformValue(GLIndex::atmosShader, "resolution", currentRenderResolution);
-	uniforms::bindUniformValue(GLIndex::atmosShader, "invProjMatrix", invProj);
-	uniforms::bindUniformValue(GLIndex::atmosShader, "invViewMatrix", invView);
-	uniforms::bindUniformValue(GLIndex::atmosShader, "numberOfRings", ringCount);
-	glBindImageTexture(0, GLIndex::frameAlbedo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);	//Modifies frame data.
-	glBindTextureUnit(1, GLIndex::frameNormal);
-	glBindTextureUnit(2, GLIndex::framePXData);
-	glDispatchCompute(
-		(currentRenderResolution.x + ATMOS_LOCAL_SIZE.x - 1u) / ATMOS_LOCAL_SIZE.x,
-		(currentRenderResolution.y + ATMOS_LOCAL_SIZE.y - 1u) / ATMOS_LOCAL_SIZE.y,
-		1
-	);
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
-
-
-	//Display shader
-	//Displays frame to the screen.
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
-	glUseProgram(GLIndex::displayShader);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); //Back to default FBO.
-	glBindTextureUnit(0, GLIndex::frameAlbedo); //Has since been modified by "atmos" shader.
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Screenspace
 	
 	//Cleanup.
 	glBindVertexArray(0);
