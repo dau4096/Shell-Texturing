@@ -3,15 +3,8 @@
 
 out vec3 aColour;
 
-struct Sample {
-	vec3 direction; //Direction to be used when sampling.
-	float _padD;
-	vec3 colour; //Colour computed for this direction.
-	float _padC;
-};
-layout(std430, binding=0) buffer sampleSSBO {
-	Sample samples[];
-};
+
+#include <sample>
 
 uniform int numberOfSamples;
 uniform mat4 pvmMatrix;

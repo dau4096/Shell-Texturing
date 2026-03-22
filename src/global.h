@@ -21,7 +21,7 @@ inline GLuint shellVAO;
 
 inline GLuint sampleEBO, sampleVAO;
 
-inline GLuint samplesSSBO;
+inline GLuint samplesSSBO, ringDataSSBO;
 
 }
 

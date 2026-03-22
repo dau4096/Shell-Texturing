@@ -572,8 +572,11 @@ void createSamplesIndices() {
 void updateSamplesDataset() {
 	//Updates the dataset of samples.
 	for (structs::Sample& sample : samplesDataset) {
-		sample.colour = sample.direction; //Temporary for debug.
+		sample.colour = sample.direction; //DEBUG
 	}
+
+	//Update the actual SSBO.
+	updateShaderStorageBufferObject(GLIndex::samplesSSBO, samplesDataset, constants::NUMBER_OF_SAMPLES); //Must be dynamic, as it will change with time later.
 }
 
 
@@ -702,9 +705,13 @@ void prepareOpenGL() {
 		0, sizeof(structs::Sample) * constants::NUMBER_OF_SAMPLES
 	);
 	createSamplesDataset();
-	updateSamplesDataset();
-	updateShaderStorageBufferObject(GLIndex::samplesSSBO, samplesDataset, constants::NUMBER_OF_SAMPLES); //Must be dynamic, as it will change with time later.
 	createSamplesIndices();
+
+	//RingData SSBO
+	GLIndex::ringDataSSBO = createShaderStorageBufferObject(
+		1, sizeof(glm::ivec2) * ringDataset.size()
+	);
+	updateShaderStorageBufferObject(GLIndex::ringDataSSBO, &(ringDataset[0]), ringDataset.size());
 
 
 	//Depth and clear.
@@ -759,6 +766,7 @@ void draw() {
 	glm::mat4 cameraPVMmatrix = pMat * vMat; // * glm::mat4(1.0f); //Model is identity matrix. Commented out as the operation does nothing.
 	glm::mat4 skyPVMmatrix = cameraPVMmatrix * graphics::getSkyModelMatrix(); //Uses scale & translation.
 
+	graphics::updateSamplesDataset(); //Update the sky values.
 
 	//Update resolution & clear
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
@@ -773,7 +781,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::skyShader, "numberOfSamples", constants::NUMBER_OF_SAMPLES);
 	glBindVertexArray(GLIndex::sampleVAO);
 	glDrawElements(GL_TRIANGLES, sampleIndices.size(), GL_UNSIGNED_INT, 0);
-
+	utils::GLErrorcheck("Sky Shader", true);
 
 
 
@@ -787,7 +795,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "layerSpacing", constants::LAYER_SPACING);
 	uniforms::bindUniformValue(GLIndex::shellShader, "numLayers", constants::NUM_LAYERS);
 	uniforms::bindUniformValue(GLIndex::shellShader, "cameraPosition", camera.position);
-	uniforms::bindUniformValue(GLIndex::shellShader, "skyColour", display::SKY_COLOUR);
+	uniforms::bindUniformValue(GLIndex::shellShader, "numberOfRings", ringCount);
 	uniforms::bindUniformValue(GLIndex::shellShader, "frameNumber", frameNumber);
 	uniforms::bindUniformValue(GLIndex::shellShader, "frameRate", display::MAX_FREQ);
 
@@ -806,7 +814,6 @@ void draw() {
 	//Renders flat plane of noise at fixed dist above camera to mimic clouds.
 	glDisable(GL_CULL_FACE);
 	glUseProgram(GLIndex::cloudShader);
-	//glNamedFramebufferDrawBuffers(GLIndex::FBO, 2, graphics::cloudDrawBuffers);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "pvmMatrix", cameraPVMmatrix);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "frameNumber", frameNumber);

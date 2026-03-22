@@ -7,17 +7,18 @@ in float layerHeight;
 in vec2 layerUV;
 in vec3 normal;
 
-layout(location=0) out vec4 outAlbedo;
-layout(location=1) out vec3 outNormal;
-layout(location=2) out vec2 outData;
+out vec4 fragColour;
 
 
 uniform float layerSpacing;
 uniform int numLayers;
 uniform vec3 cameraPosition;
-uniform vec3 skyColour;
+uniform int numberOfRings;
 uniform int frameNumber;
 uniform float frameRate;
+
+
+
 
 
 //Pre-processor step replaces these with the entire contents of the files "constants.glsl", "noise.glsl" and "clouds.shared.glsl".
@@ -25,6 +26,9 @@ uniform float frameRate;
 #include <constants>
 #include <noise>
 #include <clouds.shared>
+
+#define SAMPLE_FUNCS
+#include <sample>
 
 
 
@@ -89,8 +93,6 @@ float getCloudShadow() {
 
 
 void main() {
-	outData = vec2(T_TERRAIN, 0.0f); //Write that it was a terrain collis.
-
 	//Initial setup of values
 	vec2 UV = layerUV;
 	float cPerlinRandom = cnoise(positionXY);
@@ -112,7 +114,7 @@ void main() {
 	); //Scrolling noise wind offset. Fades at larger //distance.
 	UV += windOffset;
 	#ifdef DEBUG_WIND
-		outAlbedo = vec4(windOffset.xy*SHELL_SCALING*0.5f+0.5f, 0.0f, 1.0f);
+		fragColour = vec4(windOffset.xy*SHELL_SCALING*0.5f+0.5f, 0.0f, 1.0f);
 		return;
 	#endif
 #endif
@@ -127,14 +129,13 @@ void main() {
 #ifdef HAS_CLOUD_SHADOWS
 	float cloudEffect = getCloudShadow(); //Scrolling cloud shadow noise over terrain.
 	#ifdef DEBUG_CLOUD_SHADOWS
-		outAlbedo = vec4(cloudEffect, (cloudEffect-0.625f)/0.375f, 0.0f, 1.0f);
+		fragColour = vec4(cloudEffect, (cloudEffect-0.625f)/0.375f, 0.0f, 1.0f);
 		return;
 	#endif
 #endif
 
 
 	//Combine into final colour
-	outNormal = normal;
 	float lightMultiplier = SUN_BRIGHTNESS * ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal) * cloudEffect;
 	vec3 thisColour = mix(
 		COLOUR_A, COLOUR_B,	cPerlinRandom
@@ -142,7 +143,11 @@ void main() {
 	vec3 shellColour = mix(BASE_COLOUR, thisColour, layerDecimal) * lightMultiplier;
 
 	float distanceDecimal = 1.0f - clamp(distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f);
-	outAlbedo = vec4(mix(
+	vec3 direction = normalize(
+		vec3(positionXY.xy, layerHeight) - cameraPosition.xyz
+	);
+	vec3 skyColour = sampleHemisphereHorizontal(direction);
+	fragColour = vec4(mix(
 		skyColour, shellColour, (distanceDecimal) //Cubed to let you see further, but not too far.
 	), 1.0f);
 
