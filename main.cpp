@@ -126,7 +126,6 @@ int main() {
 		glEndQuery(GL_TIME_ELAPSED);
 		glFinish();
 
-
 		while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		glfwSwapBuffers(Window);
 		if constexpr (dev::SHOW_FREQ_CONSOLE) {

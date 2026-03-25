@@ -2,6 +2,7 @@
 #include "global.h"
 #include "utils.h"
 #include "noise.h"
+#include "physics.h"
 using namespace std;
 using namespace utils;
 using namespace glm;
@@ -573,7 +574,8 @@ void updateSamplesDataset() {
 	//Updates the dataset of samples.
 	for (structs::Sample& sample : samplesDataset) {
 		//sample.colour = sample.direction; //DEBUG
-		sample.colour = display::SKY_COLOUR;
+		//sample.colour = display::SKY_COLOUR; //TEMPORARY
+		sample.colour = physics::light::calculateSkyColour(sample.direction);
 	}
 
 	//Update the actual SSBO.
@@ -707,6 +709,7 @@ void prepareOpenGL() {
 	);
 	createSamplesDataset();
 	createSamplesIndices();
+	updateSamplesDataset(); //Add colours.
 
 	//RingData SSBO
 	GLIndex::ringDataSSBO = createShaderStorageBufferObject(
@@ -767,7 +770,7 @@ void draw() {
 	glm::mat4 cameraPVMmatrix = pMat * vMat; // * glm::mat4(1.0f); //Model is identity matrix. Commented out as the operation does nothing.
 	glm::mat4 skyPVMmatrix = cameraPVMmatrix * graphics::getSkyModelMatrix(); //Uses scale & translation.
 
-	graphics::updateSamplesDataset(); //Update the sky values.
+	//graphics::updateSamplesDataset(); //Update the sky values.
 
 	//Update resolution & clear
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
@@ -799,6 +802,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "numberOfRings", ringCount);
 	uniforms::bindUniformValue(GLIndex::shellShader, "frameNumber", frameNumber);
 	uniforms::bindUniformValue(GLIndex::shellShader, "frameRate", display::MAX_FREQ);
+	uniforms::bindUniformValue(GLIndex::shellShader, "sunDirection", display::SUN_DIRECTION);
 
 	glBindVertexArray(GLIndex::shellVAO);
 	glDrawElementsInstanced(

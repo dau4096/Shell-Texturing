@@ -22,6 +22,8 @@ namespace constants {
 	constexpr float LAYER_SPACING = MAX_HEIGHT / float(NUM_LAYERS);
 	constexpr glm::vec2 SCALE = glm::vec2(GRID_WIDTH/4, 2.0f);
 	constexpr unsigned int NUMBER_OF_SAMPLES = 128u;
+	constexpr float BODY_RADIUS = 6357e3f; //6,357km
+	constexpr float ATMOS_THICKNESS = 100e3f; //100km
 
 
 	//Invalid returns for vectors and floats.
@@ -46,6 +48,7 @@ namespace display {
 	constexpr float MAX_FREQ = 60.0f;
 
 	constexpr glm::vec3 SKY_COLOUR = glm::vec3(0.4157f, 0.6039f, 0.7098f);
+	const glm::vec3 SUN_DIRECTION = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));//glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f));
 }
 
 namespace dev {

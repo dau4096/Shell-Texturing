@@ -8,6 +8,13 @@ namespace physics {
 
 	void cameraMove();
 	
+	namespace light {
+
+		glm::vec3 calculateSkyColour(glm::vec3 sampleDirection);
+
+	}
+
+
 }
 
 #endif

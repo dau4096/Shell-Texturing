@@ -48,7 +48,6 @@ const vec2 WIND_DIRECTION = normalize(vec2(1.0f, 0.25f));
 #define SHELL_SCALING 256.0f
 #define MIN_BLADE_HEIGHT_SCALE 0.325f
 float MIN_BLADE_HEIGHT = 0.0f;
-const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define HAS_CONICAL_SHELLS
 #define CONE_RENDER_DIST 1.5f
 //Drawing
@@ -58,7 +57,7 @@ const vec3 SUN_DIRECTION = normalize(vec3(0.25f, 0.25f, 1.0f));
 #define T_TERRAIN 1u
 #define T_SKY 2u
 #define T_CLOUD 3u
-#define BRIGHTNESS_MODIFIER 3.5f
+#define BRIGHTNESS_MODIFIER 2.5f
 //Lighting
 
 

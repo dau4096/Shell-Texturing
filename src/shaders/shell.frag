@@ -16,7 +16,7 @@ uniform vec3 cameraPosition;
 uniform int numberOfRings;
 uniform int frameNumber;
 uniform float frameRate;
-
+uniform vec3 sunDirection;
 
 
 
@@ -83,7 +83,7 @@ vec2 getWindOffset(float layerDecimal) {
 
 
 float getCloudShadow() {
-	vec2 skyPos = positionXY + SUN_DIRECTION.xy * (CLOUD_HEIGHT / SUN_DIRECTION.z);
+	vec2 skyPos = positionXY + sunDirection.xy * (CLOUD_HEIGHT / sunDirection.z);
 	float cloudValue = getCloudValueForPosition(skyPos, (frameNumber/frameRate));
 	return cloudValue * 0.5f + 0.5f;
 }
@@ -136,19 +136,19 @@ void main() {
 
 
 	//Combine into final colour
-	vec3 lightMultiplier = sampleHemisphereHorizontal(normal) * ((layerDecimal * 0.75f) + 0.25f) * dot(SUN_DIRECTION, normal) * cloudEffect * BRIGHTNESS_MODIFIER;
+	vec3 lightMultiplier = sampleHemisphereHorizontal(normal) * ((layerDecimal * 0.75f) + 0.25f) * dot(sunDirection, normal) * cloudEffect * BRIGHTNESS_MODIFIER;
 	vec3 thisColour = mix(
 		COLOUR_A, COLOUR_B,	cPerlinRandom
 	);
 	vec3 shellColour = mix(BASE_COLOUR, thisColour, layerDecimal) * lightMultiplier;
 
-	float distanceDecimal = 1.0f - clamp(distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f);
+	float distanceDecimal = clamp(distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f);
 	vec3 direction = normalize(
 		vec3(positionXY.xy, layerHeight) - cameraPosition.xyz
 	);
 	vec3 skyColour = sampleHemisphereHorizontal(direction);
 	fragColour = vec4(mix(
-		skyColour, shellColour, distanceDecimal
+		skyColour, shellColour, 1.0f - (distanceDecimal * distanceDecimal * distanceDecimal)
 	), 1.0f);
 
 }
