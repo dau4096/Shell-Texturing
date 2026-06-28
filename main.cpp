@@ -108,6 +108,10 @@ int main() {
 	GLuint64 GPUnanosecs; //Nanoseconds
 	glGenQueries(1, &timerQuery);
 
+
+	float sunAngle = 0.0f;
+
+
 	frameNumber = 0u;
 	while (!glfwWindowShouldClose(Window)) {
 		double frameStart = glfwGetTime();
@@ -115,6 +119,14 @@ int main() {
 		if (keyMap[GLFW_KEY_ESCAPE]) {
 			break; //Quit
 		}
+
+
+		/*sunAngle += 0.05f;
+		glm::vec3 sunDirection = glm::normalize(glm::vec3(
+			cos(sunAngle), 0.0f, sin(sunAngle)
+		));
+		graphics::updateSamplesDataset(sunDirection);*/
+
 
 		physics::cameraMove();
 		if constexpr (dev::SHOW_VALUES) {

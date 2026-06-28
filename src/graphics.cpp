@@ -570,12 +570,12 @@ void createSamplesIndices() {
 	createSamplesEBO();
 }
 
-void updateSamplesDataset() {
+void updateSamplesDataset(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	//Updates the dataset of samples.
 	for (structs::Sample& sample : samplesDataset) {
 		//sample.colour = sample.direction; //DEBUG
 		//sample.colour = display::SKY_COLOUR; //TEMPORARY
-		sample.colour = physics::light::calculateSkyColour(sample.direction);
+		sample.colour = physics::light::calculateSkyColour(sample.direction, sunDirection);
 	}
 
 	//Update the actual SSBO.

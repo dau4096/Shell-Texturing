@@ -18,7 +18,11 @@ uniform vec3 cameraPosition;
 
 
 void main() {
-	//fragColour = vec4(1.0f, 1.0f, 1.0f, alpha); //Blend using alpha.
+
+#ifndef HAS_CLOUDS
+	return;
+#endif
+
 	float distanceFromCamera2D = length(fragPosition.xy - cameraPosition.xy);
 	if (distanceFromCamera2D > MAX_DISTANCE_FROM_CAMERA) {discard;}
 	float distanceDecimal = 1.0f - clamp(distanceFromCamera2D / MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f);

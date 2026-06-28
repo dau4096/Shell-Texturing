@@ -126,12 +126,14 @@ void main() {
 	conicalDiscard(UV, layerDelta, distanceFromCamera2D, randomDecimal, randomHeight); //Discard frag for not being cylindrical with its inclusion
 
 
-#ifdef HAS_CLOUD_SHADOWS
+#if defined(HAS_CLOUD_SHADOWS) && defined(HAS_CLOUDS)
 	float cloudEffect = getCloudShadow(); //Scrolling cloud shadow noise over terrain.
 	#ifdef DEBUG_CLOUD_SHADOWS
 		fragColour = vec4(cloudEffect, (cloudEffect-0.625f)/0.375f, 0.0f, 1.0f);
 		return;
 	#endif
+#else
+	float cloudEffect = 1.0f;
 #endif
 
 
