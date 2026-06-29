@@ -27,5 +27,5 @@ void main() {
 		CLOUD_HEIGHT + cameraPosition.z
 	);
 	gl_Position = pvmMatrix * vec4(aPos, 1.0f);
-	fragPosition = (aPos - cameraPosition).xy; //Moves horizontally with camera to fake lack of perspective.
+	fragPosition = aPos.xy;
 }

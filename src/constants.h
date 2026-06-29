@@ -49,8 +49,8 @@ namespace display {
 
 	constexpr glm::vec3 SKY_COLOUR = glm::vec3(0.4157f, 0.6039f, 0.7098f);
 	
-	//const glm::vec3 SUN_DIRECTION = glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f));
-	const glm::vec3 SUN_DIRECTION = glm::normalize(glm::vec3(1.0f, 0.0f, -0.0625f));
+	const glm::vec3 SUN_DIRECTION = glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f));
+	//const glm::vec3 SUN_DIRECTION = glm::normalize(glm::vec3(1.0f, 0.0f, -0.0625f));
 	//const glm::vec3 SUN_DIRECTION = glm::normalize(glm::vec3(0.5f, 0.5f, 0.5f));
 }
 

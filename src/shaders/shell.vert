@@ -13,6 +13,9 @@ out vec3 normal;
 uniform mat4 pvmMatrix;
 uniform float layerSpacing;
 
+
+
+
 void main() {
 
 	positionXY = aPosition.xy;

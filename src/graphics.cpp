@@ -825,6 +825,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::cloudShader, "frameRate", display::MAX_FREQ);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "skyColour", display::SKY_COLOUR);
 	uniforms::bindUniformValue(GLIndex::cloudShader, "cameraPosition", camera.position);
+	uniforms::bindUniformValue(GLIndex::cloudShader, "numberOfRings", ringCount);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Uses vertices defined in vertex shader.
 	utils::GLErrorcheck("Cloud Shader", true);
