@@ -31,7 +31,7 @@ const vec2 WIND_DIRECTION = normalize(vec2(1.0f, 0.25f));
 
 
 //Clouds
-//#define HAS_CLOUDS
+#define HAS_CLOUDS
 #define HAS_CLOUD_SHADOWS
 //#define DEBUG_CLOUDS
 //#define DEBUG_CLOUD_SHADOWS

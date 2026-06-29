@@ -91,6 +91,7 @@ namespace light {
 #define SCATTERING_STRENGTH 4.0f
 #define MIE_STRENGTH 0.04f
 #define MIE_ANISOTROPY 0.9f
+#define EXPOSURE (1.0f / 64.0f)
 
 
 const glm::vec3 wavelengths = glm::vec3(700.0f, 530.0f, 440.0f); //R/G/B wavelengths (nm)
@@ -115,6 +116,19 @@ float rayAtmosphereLength(const glm::vec3& origin, const glm::vec3 direction) {
 }
 
 
+bool rayHitsPlanet(const glm::vec3& origin, const glm::vec3& dir) {
+	//Find if a ray hits the planet.
+	float b = glm::dot(origin, dir);
+	float c = glm::dot(origin, origin) - (Pr * Pr);
+	float disc = (b*b) - c;
+
+	if (disc < 0.0f) {return false;}
+
+	float t = -b - sqrt(disc);
+
+	return (t > 0.0f);
+}
+
 
 float opticalDensityAtPoint(const glm::vec3& point) {
 	//Uses altitude to determine atmospheric density, thus optical density.
@@ -127,8 +141,8 @@ float opticalDensityAtPoint(const glm::vec3& point) {
 
 float opticalDepthAlongRay(const glm::vec3& origin, const glm::vec3 direction, const float length) {
 	//Determines optical depth of a ray from multiple samples along its length.
-	glm::vec3 densitySamplePoint = origin;
 	float stepSize = length / (float)(NUM_OPTICAL_DEPTH_SAMPLES - 1u);
+	glm::vec3 densitySamplePoint = origin + direction * (0.5f * stepSize);
 
 	float opticalDepth = 0.0f;	
 	for (unsigned int i=0u; i<NUM_OPTICAL_DEPTH_SAMPLES; i++) {
@@ -145,10 +159,16 @@ float opticalDepthAlongRay(const glm::vec3& origin, const glm::vec3 direction, c
 glm::vec3 calculateLight(const glm::vec3& viewDir, const float distanceThroughAtmosphere, const glm::vec3& sunDirection) {
 	glm::vec3 inScatterPoint = VIEW_ORIGIN;
 	float stepSize = distanceThroughAtmosphere / (float)(NUM_IN_SCATTER_SAMPLES - 1u);
+	float mu = glm::dot(viewDir, sunDirection);
+	
 	glm::vec3 inScatteredLight = glm::vec3(0.0f, 0.0f, 0.0f);
-
 	for (unsigned int i=0u; i<NUM_IN_SCATTER_SAMPLES; i++) {
 		//Step through atmos _n_ times and evaluate light contrib at each sample point.
+		if (rayHitsPlanet(inScatterPoint, sunDirection)) {
+			inScatterPoint += viewDir * stepSize;
+			continue;
+		}
+
 		float sunRayLength = rayAtmosphereLength(inScatterPoint, sunDirection);
 		float sunRayOpticalDepth = opticalDepthAlongRay(inScatterPoint, sunDirection, sunRayLength);
 		float viewRayOpticalDepth = opticalDepthAlongRay(inScatterPoint, -viewDir, stepSize * (float)(i));
@@ -156,7 +176,6 @@ glm::vec3 calculateLight(const glm::vec3& viewDir, const float distanceThroughAt
 		glm::vec3 transmittance = glm::exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * scatteringCoefficients);
 		float localDensity = opticalDensityAtPoint(inScatterPoint);
 
-		float mu = glm::dot(viewDir, sunDirection);
 		float rayleighPhase = (3.0f / (16.0f * constants::PI)) * (1.0f + mu * mu);
 		glm::vec3 rayleigh = scatteringCoefficients * rayleighPhase;
 
@@ -168,14 +187,6 @@ glm::vec3 calculateLight(const glm::vec3& viewDir, const float distanceThroughAt
 			pow(1.0f + mieAniso2 - 2.0f * MIE_ANISOTROPY * mu, 1.5f))
 		);
 		glm::vec3 mie = glm::vec3(MIE_STRENGTH * miePhase);
-
-		/*std::cout
-			<< "sunLen=" << sunRayLength
-			<< " sunOD=" << sunRayOpticalDepth
-			<< " viewOD=" << viewRayOpticalDepth
-			<< " density=" << localDensity
-			<< " trans=" << transmittance.r << ", " << transmittance.g << ", " << transmittance.b
-			<< '\n';*/
 
 		inScatteredLight += localDensity * transmittance * (rayleigh + mie) * stepSize;
 		inScatterPoint += viewDir * stepSize;
@@ -196,8 +207,9 @@ glm::vec3 calculateSkyColour(const glm::vec3& sampleDirection, const glm::vec3 s
 
 
 	glm::vec3 light = calculateLight(viewDir, distanceThroughAtmosphere, sunDirection);
-	std::cout << light.r << " " << light.g << " " << light.b << std::endl;
-	return light / 64.0f;
+
+
+	return light * EXPOSURE;
 }
 
 
