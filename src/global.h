@@ -16,7 +16,7 @@ inline int ringCount;
 
 namespace GLIndex {
 
-inline GLuint shellShader, cloudShader, skyShader, displayShader;
+inline GLuint shellShader, cloudShader, skyShader, displayShader, atmosphereShader;
 inline GLuint shellVAO;
 
 inline GLuint frameFBO, frameAlbedoComponent, frameDepthComponent;

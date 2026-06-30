@@ -599,17 +599,8 @@ void createSamplesIndices() {
 	createSamplesEBO();
 }
 
-void updateSamplesDataset(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
-	//Updates the dataset of samples.
-	for (structs::Sample& sample : samplesDataset) {
-		//sample.colour = sample.direction; //DEBUG
-		//sample.colour = display::SKY_COLOUR; //TEMPORARY
-		sample.colour = physics::light::calculateSkyColour(sample.direction, sunDirection);
-	}
 
-	//Update the actual SSBO.
-	updateShaderStorageBufferObject(GLIndex::samplesSSBO, samplesDataset, constants::NUMBER_OF_SAMPLES); //Must be dynamic, as it will change with time later.
-}
+
 
 
 std::vector<glm::vec3> singleLayerVertexArray;
@@ -755,6 +746,21 @@ GLuint createEnvironmentFBO(glm::uvec2 resolution) {
 
 
 
+
+
+void updateAtmosphereComputeShader(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
+	const glm::uvec3 ATMOSPHERE_LOCAL_SIZE = glm::uvec3(32, 1, 1);
+	glUseProgram(GLIndex::atmosphereShader);
+	uniforms::bindUniformValue(GLIndex::atmosphereShader, "sunDirection", sunDirection);
+	uniforms::bindUniformValue(GLIndex::atmosphereShader, "numberOfRings", ringCount);
+	glDispatchCompute(
+		(constants::NUMBER_OF_SAMPLES + ATMOSPHERE_LOCAL_SIZE.x - 1) / ATMOSPHERE_LOCAL_SIZE.x,
+		1, 1
+	);
+}
+
+
+
 void prepareOpenGL(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	//OpenGL setup;
 	GLIndex::shellVAO = graphics::getVAO(constants::GRID_WIDTH);
@@ -765,6 +771,7 @@ void prepareOpenGL(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	GLIndex::cloudShader = graphics::createShaderProgram("clouds", true);
 	GLIndex::skyShader = graphics::createShaderProgram("sky", true);
 	GLIndex::displayShader = graphics::createShaderProgram("display", false); //No display.vert file
+	GLIndex::atmosphereShader = graphics::createComputeShader("atmosphere");
 
 
 	//Samples SSBO
@@ -773,7 +780,8 @@ void prepareOpenGL(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	);
 	createSamplesDataset();
 	createSamplesIndices();
-	updateSamplesDataset(sunDirection); //Add colours.
+	updateShaderStorageBufferObject(GLIndex::samplesSSBO, samplesDataset, constants::NUMBER_OF_SAMPLES); //Must be dynamic, as it will change with time later.
+	updateAtmosphereComputeShader(sunDirection); //Add colours.
 
 	//RingData SSBO
 	GLIndex::ringDataSSBO = createShaderStorageBufferObject(
@@ -837,7 +845,7 @@ void draw(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	glm::mat4 cameraPVMmatrix = pMat * vMat; // * glm::mat4(1.0f); //Model is identity matrix. Commented out as the operation does nothing.
 	glm::mat4 skyPVMmatrix = cameraPVMmatrix * graphics::getSkyModelMatrix(); //Uses scale & translation.
 
-	//graphics::updateSamplesDataset(); //Update the sky values.
+	graphics::updateAtmosphereComputeShader(sunDirection); //Update the sky values.
 
 	//Update resolution & clear
 	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);

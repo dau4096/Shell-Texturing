@@ -80,16 +80,10 @@ void handleInputs() {
 
 
 
+float sunAngle = -0.5f;
 #ifdef TRACK_SUN
 int imgNumber = -1;
-float sunAngle = -0.75f;
-void trackSunScreenshots() {
-	glm::vec3 sunDirection = glm::normalize(glm::vec3(
-		cos(sunAngle), 1.0f, sin(sunAngle)
-	));
-	graphics::updateSamplesDataset(sunDirection);
-	sunAngle += 0.01f;
-
+void trackSunScreenshots(const glm::vec3& sunDirection) {
 	camera.position = glm::vec3(11.3364f, 5.07466f, 2.00475f);
 	//print(camera.position); 
 
@@ -147,9 +141,18 @@ int main() {
 
 
 
+		glm::vec3 sunDirection = glm::normalize(glm::vec3(
+			cos(sunAngle), 1.0f, sin(sunAngle)
+		));
+
+
 		#ifdef TRACK_SUN
-		trackSunScreenshots();
-		if (sunAngle > constants::PI * 2.0f) {break;}
+		trackSunScreenshots(sunDirection);
+		sunAngle += 0.01f;
+		if (sunAngle > constants::PI + 0.5f) {break;}
+		#else
+		sunAngle += 0.0025f;
+		if (sunAngle > constants::PI + 0.5f) {sunAngle = -0.5f;}
 		#endif
 
 		physics::cameraMove();
@@ -166,7 +169,7 @@ int main() {
 
 		#ifdef TRACK_SUN
 		if (imgNumber == -1) {imgNumber++;}
-		else {graphics::saveScreenshot("test", std::to_string(imgNumber++));}
+		else {graphics::saveScreenshot("imgSequence", std::to_string(imgNumber++));}
 
 		#else
 

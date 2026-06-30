@@ -55,11 +55,25 @@ float MIN_BLADE_HEIGHT = 0.0f;
 
 
 //Lighting
-#define T_TERRAIN 1u
-#define T_SKY 2u
-#define T_CLOUD 3u
 #define BRIGHTNESS_MODIFIER 2.5f
 //Lighting
+
+
+
+//Atmosphere
+#define Pr 6357.0f /* Planet radius (km) */
+#define Ar 100.0f /* Atmosphere altitude (km) */
+
+#define VIEW_ORIGIN vec3(0.0f, 0.0f, Pr)
+#define NUM_IN_SCATTER_SAMPLES 64u /* Light accumulation samples */
+#define NUM_OPTICAL_DEPTH_SAMPLES 32u /* Optical depth samples */
+#define DENSITY_FALLOFF 16.0f /* Atmospheric density falloff with altitude */
+#define EXTINCTION 1.0e-3f /* Light attenuation scale */
+#define RAYLEIGH_STRENGTH 3.0f /* Strength of Rayleigh scattering */
+#define MIE_STRENGTH 0.08f /* Strength of Mie scattering */
+#define MIE_ANISOTROPY 0.95f /* Forward scattering bias */
+#define EXPOSURE (1.0f / 64.0f) /* Brightness */
+//Atmosphere
 
 
 //General
