@@ -1,11 +1,11 @@
+#include <stb_image_write.h>
+
 #include "includes.h"
 #include "global.h"
 #include "utils.h"
 #include "noise.h"
 #include "physics.h"
-using namespace std;
-using namespace utils;
-using namespace glm;
+
 
 
 namespace uniforms {
@@ -86,7 +86,7 @@ namespace graphics {
 
 GLFWwindow* initializeWindow(int width, int height, const char* title) {
 	if (!glfwInit()) {
-		raise("Failed to initialize GLFW");
+		utils::raise("Failed to initialize GLFW");
 		return nullptr;
 	}
 
@@ -99,14 +99,14 @@ GLFWwindow* initializeWindow(int width, int height, const char* title) {
 	GLFWwindow* Window = glfwCreateWindow(width, height, title, NULL, NULL);
 	if (!Window) {
 		glfwTerminate();
-		raise("Failed to create GLFW window");
+		utils::raise("Failed to create GLFW window");
 		return nullptr;
 	}
 	glfwMakeContextCurrent(Window);
 
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK) {
-		raise("Failed to initialize GLEW.");
+		utils::raise("Failed to initialize GLEW.");
 	}
 
 	//glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -160,7 +160,7 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 	//Create a shader id
 	GLuint shader = glCreateShader(shaderType);
 	if (shader == 0) {
-		raise("Error: Failed to create shader.");
+		utils::raise("Error: Failed to create shader.");
 		return 0;
 	}
 
@@ -178,7 +178,7 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 		}
 		char infolog[512];
 		glGetShaderInfoLog(shader, 512, nullptr, infolog);
-		raise("Error: Shader compilation failed;\n" + string(infolog));
+		utils::raise("Error: Shader compilation failed;\n" + string(infolog));
 	}
 
 	return shader;
@@ -207,7 +207,7 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 		}
 		char infolog[512];
 		glGetProgramInfoLog(shaderProgram, 512, nullptr, infolog);
-		raise("Error: Program linking failed;\n" + string(infolog));
+		utils::raise("Error: Program linking failed;\n" + string(infolog));
 	}
 
 	glDeleteShader(vertexShader);
@@ -233,7 +233,7 @@ GLuint createComputeShader(std::string compShaderName) {
 		}
 		char infolog[512];
 		glGetProgramInfoLog(shaderProgram, 512, nullptr, infolog);
-		raise("Error: Compute shader program linking failed:\n" + std::string(infolog));
+		utils::raise("Error: Compute shader program linking failed:\n" + std::string(infolog));
 	}
 
 	glDeleteShader(computeShader);
@@ -286,6 +286,7 @@ static inline glm::mat4 viewMatrix() {
 		cos(camera.viewAngle.x)*cos(camera.viewAngle.y),
 		sin(camera.viewAngle.y)
 	);
+	if constexpr (dev::SHOW_VALUES) {utils::print(forward);}
 
 	return glm::lookAt(camera.position, camera.position + forward, glm::vec3(0.0f, 0.0f, 1.0f));
 }
@@ -387,6 +388,34 @@ void updateShaderStorageBufferObject(
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	}
 }
+
+
+
+
+void saveScreenshot(const std::string dir, const std::string filename) {
+	std::vector<unsigned char> pixels(960 * 540 * 3);
+
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	stbi_flip_vertically_on_write(true);
+
+	std::filesystem::path dirName = std::filesystem::path("screenshots") / dir;
+	std::filesystem::create_directories(dirName);
+
+	std::filesystem::path imagePath = dirName / (filename + ".png");
+
+	stbi_write_png(
+		imagePath.string().c_str(),
+		960, 540,
+		3, pixels.data(), 960*3
+	);
+
+
+	std::cout << "Successfully saved image as : [" << imagePath << "]" << std::endl;
+}
+
 
 
 
@@ -688,10 +717,45 @@ GLuint getVAO(int n) {
 }
 
 
+GLuint allDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+GLuint createEnvironmentFBO(glm::uvec2 resolution) {
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-GLenum shellDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
-GLenum cloudDrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT2};
-void prepareOpenGL() {
+	//Albedo
+	glGenTextures(1, &GLIndex::frameAlbedoComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	//Depth
+	glGenTextures(1, &GLIndex::frameDepthComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glDrawBuffers(1, allDrawBuffers);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		utils::raise("Environment FBO incomplete!");
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
+}
+
+
+
+void prepareOpenGL(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	//OpenGL setup;
 	GLIndex::shellVAO = graphics::getVAO(constants::GRID_WIDTH);
 
@@ -709,13 +773,16 @@ void prepareOpenGL() {
 	);
 	createSamplesDataset();
 	createSamplesIndices();
-	updateSamplesDataset(); //Add colours.
+	updateSamplesDataset(sunDirection); //Add colours.
 
 	//RingData SSBO
 	GLIndex::ringDataSSBO = createShaderStorageBufferObject(
 		1, sizeof(glm::ivec2) * ringDataset.size()
 	);
 	updateShaderStorageBufferObject(GLIndex::ringDataSSBO, &(ringDataset[0]), ringDataset.size());
+
+
+	GLIndex::frameFBO = createEnvironmentFBO(glm::uvec2(960, 540));
 
 
 	//Depth and clear.
@@ -773,8 +840,9 @@ void draw() {
 	//graphics::updateSamplesDataset(); //Update the sky values.
 
 	//Update resolution & clear
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, 960, 540);
 
 
 
@@ -829,6 +897,17 @@ void draw() {
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Uses vertices defined in vertex shader.
 	utils::GLErrorcheck("Cloud Shader", true);
+
+
+
+	//Return to default FBO
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+
+
+	glUseProgram(GLIndex::displayShader);
+	glBindTextureUnit(0, GLIndex::frameAlbedoComponent);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 
 	

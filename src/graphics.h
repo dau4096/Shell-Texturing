@@ -34,9 +34,11 @@ namespace graphics {
 	GLuint getVAO();
 	glm::mat4 getPVMMatrix();
 
+	void saveScreenshot(const std::string dir, const std::string filename);
+
 	void updateSamplesDataset(const glm::vec3 sunDirection=display::SUN_DIRECTION);
 
-	void prepareOpenGL();
+	void prepareOpenGL(const glm::vec3 sunDirection=display::SUN_DIRECTION);
 }
 
 

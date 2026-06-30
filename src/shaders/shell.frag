@@ -138,7 +138,7 @@ void main() {
 
 
 	//Combine into final colour
-	vec3 lightMultiplier = sampleHemisphereHorizontal(normal) * ((layerDecimal * 0.75f) + 0.25f) * dot(sunDirection, normal) * cloudEffect * BRIGHTNESS_MODIFIER;
+	vec3 lightMultiplier = sampleHemisphere(normal).colour * ((layerDecimal * 0.75f) + 0.25f) * dot(sunDirection, normal) * cloudEffect * BRIGHTNESS_MODIFIER;
 	vec3 thisColour = mix(
 		COLOUR_A, COLOUR_B,	cPerlinRandom
 	);

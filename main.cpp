@@ -1,10 +1,12 @@
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
 #include "src/includes.h"
 #include "src/physics.h"
 #include "src/graphics.h"
 #include "src/utils.h"
-using namespace std;
-using namespace utils;
-using namespace glm;
+
 
 
 
@@ -77,6 +79,29 @@ void handleInputs() {
 
 
 
+
+#ifdef TRACK_SUN
+int imgNumber = -1;
+float sunAngle = -0.75f;
+void trackSunScreenshots() {
+	glm::vec3 sunDirection = glm::normalize(glm::vec3(
+		cos(sunAngle), 1.0f, sin(sunAngle)
+	));
+	graphics::updateSamplesDataset(sunDirection);
+	sunAngle += 0.01f;
+
+	camera.position = glm::vec3(11.3364f, 5.07466f, 2.00475f);
+	//print(camera.position); 
+
+	camera.viewAngle = glm::vec2(
+		glm::atan(sunDirection.x, sunDirection.y),
+		glm::asin(sunDirection.z)
+	); //Track the sun.
+}
+#endif
+
+
+
 int main() {
 	try { //Catch exceptions
 	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
@@ -109,9 +134,6 @@ int main() {
 	glGenQueries(1, &timerQuery);
 
 
-	float sunAngle = 0.0f;
-
-
 	frameNumber = 0u;
 	while (!glfwWindowShouldClose(Window)) {
 		double frameStart = glfwGetTime();
@@ -121,25 +143,31 @@ int main() {
 		}
 
 
-		/*sunAngle += 0.05f;
-		glm::vec3 sunDirection = glm::normalize(glm::vec3(
-			cos(sunAngle), 0.0f, sin(sunAngle)
-		));
-		graphics::updateSamplesDataset(sunDirection);*/
 
+		#ifdef TRACK_SUN
+		trackSunScreenshots();
+		if (sunAngle > constants::PI * 2.0f) {break;}
+		#endif
 
 		physics::cameraMove();
 		if constexpr (dev::SHOW_VALUES) {
-			print(camera.position);
-			print(camera.viewAngle);
+			utils::print(camera.position);
+			utils::print(camera.viewAngle);
 		}
+
 		glBeginQuery(GL_TIME_ELAPSED, timerQuery);
 		frame::draw();
 		glEndQuery(GL_TIME_ELAPSED);
 		glFinish();
 
+
+		#ifdef TRACK_SUN
+		if (imgNumber == -1) {imgNumber++;}
+		else {graphics::saveScreenshot("test", std::to_string(imgNumber++));}
+
+		#else
+
 		while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
-		glfwSwapBuffers(Window);
 		if constexpr (dev::SHOW_FREQ_CONSOLE) {
 			glGetQueryObjectui64v(timerQuery, GL_QUERY_RESULT, &GPUnanosecs);
 			double ms = GPUnanosecs / 1e6;
@@ -148,6 +176,8 @@ int main() {
 
 		cursorXPosPrev = cursorXPos;
 		cursorYPosPrev = cursorYPos;
+		#endif
+		glfwSwapBuffers(Window);
 		frameNumber++;
 	}
 

@@ -88,7 +88,7 @@ namespace light {
 #define NUM_OPTICAL_DEPTH_SAMPLES 32u
 #define DENSITY_FALLOFF 8.0f
 #define EXTINCTION 1e-3f
-#define SCATTERING_STRENGTH 4.0f
+#define SCATTERING_STRENGTH 3.0f
 #define MIE_STRENGTH 0.04f
 #define MIE_ANISOTROPY 0.9f
 #define EXPOSURE (1.0f / 64.0f)
