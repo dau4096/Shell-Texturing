@@ -831,7 +831,7 @@ glm::mat4 getSkyModelMatrix() {
 
 namespace frame {
 
-void draw() {
+void draw(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	glm::mat4 pMat = graphics::projectionMatrix();
 	glm::mat4 vMat = graphics::viewMatrix();
 	glm::mat4 cameraPVMmatrix = pMat * vMat; // * glm::mat4(1.0f); //Model is identity matrix. Commented out as the operation does nothing.
@@ -870,7 +870,7 @@ void draw() {
 	uniforms::bindUniformValue(GLIndex::shellShader, "numberOfRings", ringCount);
 	uniforms::bindUniformValue(GLIndex::shellShader, "frameNumber", frameNumber);
 	uniforms::bindUniformValue(GLIndex::shellShader, "frameRate", display::MAX_FREQ);
-	uniforms::bindUniformValue(GLIndex::shellShader, "sunDirection", display::SUN_DIRECTION);
+	uniforms::bindUniformValue(GLIndex::shellShader, "sunDirection", sunDirection);
 
 	glBindVertexArray(GLIndex::shellVAO);
 	glDrawElementsInstanced(

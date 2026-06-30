@@ -138,11 +138,18 @@ void main() {
 
 
 	//Combine into final colour
-	vec3 lightMultiplier = sampleHemisphere(normal).colour * ((layerDecimal * 0.75f) + 0.25f) * dot(sunDirection, normal) * cloudEffect * BRIGHTNESS_MODIFIER;
+	vec3 lightMultiplier = (
+		normalize(sampleHemisphere(sunDirection).colour) * SUN_BRIGHTNESS *
+		((layerDecimal * 0.75f) + 0.25f) *
+		(clamp(dot(sunDirection, normal), 0.0f, 1.0f) * 0.99f + 0.01f) *
+		cloudEffect *
+		BRIGHTNESS_MODIFIER
+	);
 	vec3 thisColour = mix(
 		COLOUR_A, COLOUR_B,	cPerlinRandom
 	);
 	vec3 shellColour = mix(BASE_COLOUR, thisColour, layerDecimal) * lightMultiplier;
+	
 
 	float distanceDecimal = clamp(distanceFromCamera2D/MAX_DISTANCE_FROM_CAMERA, 0.0f, 1.0f);
 	vec3 direction = normalize(

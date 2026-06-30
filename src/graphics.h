@@ -46,7 +46,7 @@ namespace frame {
 
 	void updateSSBOS();
 
-	void draw();
+	void draw(const glm::vec3 sunDirection=display::SUN_DIRECTION);
 
 }
 

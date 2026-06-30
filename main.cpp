@@ -121,7 +121,10 @@ int main() {
 	cursorYPosPrev = cursorYPos;
 	utils::GLErrorcheck("Window Creation", true);
 
-	graphics::prepareOpenGL();
+	//glm::vec3 sunDirection = glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f));
+	//glm::vec3 sunDirection = glm::normalize(glm::vec3(1.0f, 0.0f, -0.0625f));
+	glm::vec3 sunDirection = glm::normalize(glm::vec3(0.5f, 0.5f, 0.5f));
+	graphics::prepareOpenGL(sunDirection);
 	double maxFrameTime = 1.0f/display::MAX_FREQ;
 	for (int key : monitoredKeys) {
 		keyMap[key] = false;
@@ -156,7 +159,7 @@ int main() {
 		}
 
 		glBeginQuery(GL_TIME_ELAPSED, timerQuery);
-		frame::draw();
+		frame::draw(sunDirection);
 		glEndQuery(GL_TIME_ELAPSED);
 		glFinish();
 

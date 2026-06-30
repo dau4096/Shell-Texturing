@@ -1,10 +1,5 @@
 CC = g++
-CFLAGS = -std=c++23 -O2 -ffast-math -g \
-         -I/usr/include \
-         -I/usr/include/GL \
-         -I/usr/include/glm \
-	 	 -I/usr/local/include \
-	 	 -DTRACK_SUN
+CFLAGS = -std=c++23 -O3 -ffast-math -g #-DTRACK_SUN
 
 LIBS = -lglfw -lGLEW -lGL -lpugixml -lm -ldl -pthread
 
