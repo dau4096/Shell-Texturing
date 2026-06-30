@@ -42,7 +42,7 @@ namespace constants {
 namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
-	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(1920, 1080);
 
 	constexpr float FOV = 70.0f * constants::TO_RAD;
 	constexpr float MAX_FREQ = 60.0f;

@@ -393,7 +393,7 @@ void updateShaderStorageBufferObject(
 
 
 void saveScreenshot(const std::string dir, const std::string filename) {
-	std::vector<unsigned char> pixels(960 * 540 * 3);
+	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
 
 	glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
@@ -408,8 +408,8 @@ void saveScreenshot(const std::string dir, const std::string filename) {
 
 	stbi_write_png(
 		imagePath.string().c_str(),
-		960, 540,
-		3, pixels.data(), 960*3
+		currentRenderResolution.x, currentRenderResolution.y,
+		3, pixels.data(), currentRenderResolution.x*3
 	);
 
 
@@ -790,7 +790,7 @@ void prepareOpenGL(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	updateShaderStorageBufferObject(GLIndex::ringDataSSBO, &(ringDataset[0]), ringDataset.size());
 
 
-	GLIndex::frameFBO = createEnvironmentFBO(glm::uvec2(960, 540));
+	GLIndex::frameFBO = createEnvironmentFBO(currentRenderResolution);
 
 
 	//Depth and clear.
@@ -850,7 +850,7 @@ void draw(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	//Update resolution & clear
 	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glViewport(0, 0, 960, 540);
+	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 
 
 

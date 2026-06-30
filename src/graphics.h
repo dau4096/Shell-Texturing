@@ -30,6 +30,7 @@ namespace graphics {
 	GLuint createShaderProgram(std::string name, bool hasVertexSource=true);
 
 	GLuint createGLImage2D(size_t width, size_t height, GLint internalFormat=GL_RGBA32F, GLint samplingType=GL_NEAREST, GLint edgeSampling=GL_REPEAT);
+	GLuint createEnvironmentFBO(glm::uvec2 resolution);
 
 	GLuint getVAO();
 	glm::mat4 getPVMMatrix();

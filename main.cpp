@@ -21,6 +21,8 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 		glm::min(width, desiredRenderResolution.x),
 		glm::min(height, desiredRenderResolution.y)
 	);
+
+	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
 }
 
 
@@ -193,7 +195,8 @@ int main() {
 		//timeV += 60u; //Progress by 1 minute
 		if (timeV > 68400) {timeV = 18000;}
 		#endif
-		std::cout << timeV << " " << getTimeString() << std::endl;
+		//std::cout << timeV << " " << getTimeString() << std::endl;
+
 
 		physics::cameraMove();
 		if constexpr (dev::SHOW_VALUES) {
