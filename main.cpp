@@ -35,7 +35,9 @@ const std::vector<int> monitoredKeys = {
 	GLFW_KEY_LEFT_SHIFT,
 	GLFW_KEY_LEFT_CONTROL,
 	GLFW_KEY_ESCAPE,
-	GLFW_KEY_I, GLFW_KEY_O
+	GLFW_KEY_I, GLFW_KEY_O,
+	GLFW_KEY_R, GLFW_KEY_F,
+	GLFW_KEY_F10
 };
 
 double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
@@ -52,6 +54,18 @@ void handleInputs() {
 		} else if (keyState == GLFW_RELEASE) {
 			keyMap[key] = false;
 		}
+	}
+
+
+
+	if (keyMap[GLFW_KEY_R]) {timeV += 30u;}
+	if (keyMap[GLFW_KEY_F]) {timeV -= 30u;}
+	timeV %= 86400u;
+
+
+	if (keyMap[GLFW_KEY_F10]) {
+		std::string timeStr = utils::getTimestamp();
+		graphics::saveScreenshot("screenshots", timeStr);
 	}
 
 
@@ -80,7 +94,29 @@ void handleInputs() {
 
 
 
-float sunAngle = -0.5f;
+glm::vec3 getSunDirection() {
+	//Uses current time to get sun's direction.
+	float timeFraction = (float)(timeV) / 86400.0f;
+	float sunAngle = constants::PI2 * timeFraction - (constants::PI / 2.0f);
+
+	return glm::normalize(glm::vec3(
+		cos(sunAngle), 1.0f, sin(sunAngle)
+	));
+}
+
+
+std::string getTimeString() {
+	//Get human-readable time from the seconds value.
+	unsigned int seconds = timeV % 60u;
+	unsigned int minutes = (timeV / 60u) % 60u;
+	unsigned int hours = (timeV / 3600u) % 24u;
+	return std::format(
+		"{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds
+	);
+}
+
+
+
 #ifdef TRACK_SUN
 int imgNumber = -1;
 void trackSunScreenshots(const glm::vec3& sunDirection) {
@@ -125,6 +161,12 @@ int main() {
 	}
 
 
+	#ifdef TRACK_SUN
+	timeV = 18000u; //5am start
+	#endif
+
+
+
 	//Timer queries;
 	GLuint timerQuery;
 	GLuint64 GPUnanosecs; //Nanoseconds
@@ -141,19 +183,17 @@ int main() {
 
 
 
-		glm::vec3 sunDirection = glm::normalize(glm::vec3(
-			cos(sunAngle), 1.0f, sin(sunAngle)
-		));
 
-
+		glm::vec3 sunDirection = getSunDirection();
 		#ifdef TRACK_SUN
 		trackSunScreenshots(sunDirection);
-		sunAngle += 0.01f;
-		if (sunAngle > constants::PI + 0.5f) {break;}
+		timeV += 600u; //Progress by 10 minutes
+		if (timeV > 68400) {break;}
 		#else
-		sunAngle += 0.0025f;
-		if (sunAngle > constants::PI + 0.5f) {sunAngle = -0.5f;}
+		//timeV += 60u; //Progress by 1 minute
+		if (timeV > 68400) {timeV = 18000;}
 		#endif
+		std::cout << timeV << " " << getTimeString() << std::endl;
 
 		physics::cameraMove();
 		if constexpr (dev::SHOW_VALUES) {

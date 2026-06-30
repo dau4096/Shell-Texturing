@@ -10,6 +10,8 @@ inline std::unordered_map<int, bool> keyMap;
 
 inline float verticalFOV;
 inline unsigned int frameNumber;
+inline unsigned int timeV = 25200u; //Ranges from 0-86400. (Seconds)
+
 
 inline int ringCount;
 
