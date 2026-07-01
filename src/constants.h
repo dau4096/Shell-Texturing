@@ -21,7 +21,7 @@ namespace constants {
 	constexpr float MAX_HEIGHT = 0.0625f;
 	constexpr float LAYER_SPACING = MAX_HEIGHT / float(NUM_LAYERS);
 	constexpr glm::vec2 SCALE = glm::vec2(GRID_WIDTH/4, 2.0f);
-	constexpr unsigned int NUMBER_OF_SAMPLES = 16384u;
+	constexpr unsigned int NUMBER_OF_SAMPLES = 32768u;
 	constexpr float BODY_RADIUS = 6357e3f; //6,357km
 	constexpr float ATMOS_THICKNESS = 100e3f; //100km
 
@@ -41,7 +41,7 @@ namespace constants {
 
 namespace display {
 	//Resolutions
-	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(1920, 1080);
 	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(1920, 1080);
 
 	constexpr float FOV = 70.0f * constants::TO_RAD;

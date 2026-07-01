@@ -189,7 +189,7 @@ int main() {
 		glm::vec3 sunDirection = getSunDirection();
 		#ifdef TRACK_SUN
 		trackSunScreenshots(sunDirection);
-		timeV += 600u; //Progress by 10 minutes
+		timeV += 60u; //Progress by 1 minute
 		if (timeV > 68400) {break;}
 		#else
 		//timeV += 60u; //Progress by 1 minute

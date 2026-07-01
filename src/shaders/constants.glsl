@@ -67,12 +67,12 @@ float MIN_BLADE_HEIGHT = 0.0f;
 #define VIEW_ORIGIN vec3(0.0f, 0.0f, Pr)
 #define NUM_IN_SCATTER_SAMPLES 64u /* Light accumulation samples */
 #define NUM_OPTICAL_DEPTH_SAMPLES 32u /* Optical depth samples */
-#define DENSITY_FALLOFF 16.0f /* Atmospheric density falloff with altitude */
+#define DENSITY_FALLOFF 6.0f /* Atmospheric density falloff with altitude */
 #define EXTINCTION 1.0e-3f /* Light attenuation scale */
-#define RAYLEIGH_STRENGTH 3.0f /* Strength of Rayleigh scattering */
+#define RAYLEIGH_STRENGTH 2.6f /* Strength of Rayleigh scattering */
 #define MIE_STRENGTH 0.08f /* Strength of Mie scattering */
-#define MIE_ANISOTROPY 0.95f /* Forward scattering bias */
-#define EXPOSURE (1.0f / 64.0f) /* Brightness */
+#define MIE_ANISOTROPY 0.975f /* Forward scattering bias */
+#define EXPOSURE (1.0f / 96.0f) /* Brightness */
 //Atmosphere
 
 

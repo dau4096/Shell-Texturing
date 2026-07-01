@@ -139,9 +139,8 @@ void main() {
 
 	//Combine into final colour
 	vec3 lightMultiplier = (
-		normalize(sampleHemisphere(sunDirection).colour) * SUN_BRIGHTNESS *
+		(normalize(sampleHemisphere(sunDirection).colour) * SUN_BRIGHTNESS * (clamp(dot(sunDirection, normal), 0.0f, 1.0f) * 0.99f + 0.01f)) *
 		((layerDecimal * 0.75f) + 0.25f) *
-		(clamp(dot(sunDirection, normal), 0.0f, 1.0f) * 0.99f + 0.01f) *
 		cloudEffect *
 		BRIGHTNESS_MODIFIER
 	);
