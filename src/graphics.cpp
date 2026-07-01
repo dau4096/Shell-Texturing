@@ -790,6 +790,20 @@ void prepareOpenGL(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 	updateShaderStorageBufferObject(GLIndex::ringDataSSBO, &(ringDataset[0]), ringDataset.size());
 
 
+	//Z-Offsets SSBO
+	GLIndex::shellOffsetSSBO = createShaderStorageBufferObject(
+		2, sizeof(float) * constants::NUM_LAYERS
+	);
+	std::array<float, constants::NUM_LAYERS> offsets;
+	for (unsigned int i=0u; i<constants::NUM_LAYERS; i++) {
+		offsets[i] = glm::pow(
+			float(i) / (float)(constants::NUM_LAYERS - 1),
+			1.0f / constants::LAYER_HEIGHT_SCALING
+		) * constants::MAX_HEIGHT;
+	}
+	updateShaderStorageBufferObject(GLIndex::shellOffsetSSBO, &(offsets[0]), offsets.size());
+
+
 	GLIndex::frameFBO = createEnvironmentFBO(currentRenderResolution);
 
 
@@ -872,7 +886,7 @@ void draw(const glm::vec3 sunDirection=display::SUN_DIRECTION) {
 
 	//Uniforms
 	uniforms::bindUniformValue(GLIndex::shellShader, "pvmMatrix", cameraPVMmatrix);
-	uniforms::bindUniformValue(GLIndex::shellShader, "layerSpacing", constants::LAYER_SPACING);
+	uniforms::bindUniformValue(GLIndex::shellShader, "maxHeight", (float)(constants::MAX_HEIGHT));
 	uniforms::bindUniformValue(GLIndex::shellShader, "numLayers", constants::NUM_LAYERS);
 	uniforms::bindUniformValue(GLIndex::shellShader, "cameraPosition", camera.position);
 	uniforms::bindUniformValue(GLIndex::shellShader, "numberOfRings", ringCount);

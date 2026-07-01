@@ -15,11 +15,11 @@ namespace constants {
 	constexpr float TO_DEG = 57.29578f;
 
 
-	constexpr int GRID_WIDTH = 256;
+	constexpr int GRID_WIDTH = 128;
 	constexpr float NOISE_FREQ = 0.5f;
-	constexpr int NUM_LAYERS = 64;
+	constexpr int NUM_LAYERS = 24;
 	constexpr float MAX_HEIGHT = 0.0625f;
-	constexpr float LAYER_SPACING = MAX_HEIGHT / float(NUM_LAYERS);
+	constexpr float LAYER_HEIGHT_SCALING = 4.0f;
 	constexpr glm::vec2 SCALE = glm::vec2(GRID_WIDTH/4, 2.0f);
 	constexpr unsigned int NUMBER_OF_SAMPLES = 32768u;
 	constexpr float BODY_RADIUS = 6357e3f; //6,357km

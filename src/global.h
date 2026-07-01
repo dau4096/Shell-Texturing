@@ -25,7 +25,7 @@ inline GLuint frameFBO, frameAlbedoComponent, frameDepthComponent;
 
 inline GLuint sampleEBO, sampleVAO;
 
-inline GLuint samplesSSBO, ringDataSSBO;
+inline GLuint samplesSSBO, ringDataSSBO, shellOffsetSSBO;
 
 }
 

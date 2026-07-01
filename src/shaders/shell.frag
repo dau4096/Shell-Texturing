@@ -4,13 +4,14 @@
 in vec2 positionXY;
 in flat int layerIndex;
 in float layerHeight;
+in float baseHeight;
 in vec2 layerUV;
 in vec3 normal;
 
 out vec4 fragColour;
 
 
-uniform float layerSpacing;
+uniform float maxHeight;
 uniform int numLayers;
 uniform vec3 cameraPosition;
 uniform int numberOfRings;
@@ -97,10 +98,9 @@ void main() {
 	vec2 UV = layerUV;
 	float cPerlinRandom = cnoise(positionXY);
 	float layerDecimal = float(layerIndex) / float(numLayers); //0-1 of lowest layer to highest layer.
-	float layerDelta = float(layerIndex) * layerSpacing; //Difference between the current layer and the base.
+	float layerDelta = maxHeight / float(numLayers) * float(layerIndex); //Difference between the current layer and the base.
 	float distanceFromCamera2D;
 	distanceFromCamera2DCulling(distanceFromCamera2D, layerDecimal); //Reduce number of layers further away.
-	float maxHeight = float(numLayers) * layerSpacing;
 	MIN_BLADE_HEIGHT = MIN_BLADE_HEIGHT_SCALE * maxHeight;
 
 
