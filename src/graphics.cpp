@@ -1,3 +1,5 @@
+/* graphics.cpp */
+#include <stb_image.h>
 #include <stb_image_write.h>
 
 #include "includes.h"
@@ -650,12 +652,94 @@ void generateGridIndices(int n, std::vector<GLuint>* indices, GLuint baseVertex)
 }
 
 
+
+
+
+
+
+
+void saveMap(const std::string filename, const float minimum=-4.0f, const float maximum=4.0f) {
+	std::vector<unsigned char> pixels(constants::GRID_WIDTH * constants::GRID_WIDTH * 3);
+
+	unsigned int idx = 0u;
+	for (const glm::vec3& vertex : singleLayerVertexArray) {
+		float h = (vertex.z - minimum) / (maximum - minimum);
+		unsigned char hChar = (unsigned char)(h * 255.0f);
+
+		pixels[(idx*3u) + 0u] = hChar; //Red   / Terrain height
+		pixels[(idx*3u) + 1u] = 0xFFu; //Green / Terrain(or)Grass
+		pixels[(idx*3u) + 2u] = 0x00u; //Blue  / Terrain texture ID(or)None
+		idx++;
+	}
+
+	std::filesystem::path dirName = std::filesystem::path("textures") / "maps";
+	std::filesystem::create_directories(dirName);
+
+	std::filesystem::path imagePath = dirName / (filename + ".png");
+
+	stbi_write_png(
+		imagePath.string().c_str(),
+		constants::GRID_WIDTH, constants::GRID_WIDTH,
+		3, pixels.data(), constants::GRID_WIDTH*3
+	);
+
+
+	std::cout << "Successfully saved image as : [" << imagePath << "]" << std::endl;
+}
+
+
+void loadMap(const std::string filename, const float minimum=-4.0f, const float maximum=4.0f) {
+	singleLayerVertexArray.clear();     	singleLayerNormalArray.clear();
+	singleLayerVertexArray.reserve(constants::GRID_WIDTH*constants::GRID_WIDTH);	singleLayerNormalArray.reserve(constants::GRID_WIDTH*constants::GRID_WIDTH);
+
+	std::filesystem::path imagePath = std::filesystem::path("textures") / "maps" / (filename + ".png");
+	int width, height, channels;
+	unsigned char* mapData = stbi_load(
+		imagePath.string().c_str(),
+		&width, &height,
+		&channels, 3
+	);
+
+	if (!mapData) {
+		std::cerr << "Failed to load map data : " << stbi_failure_reason() << std::endl;
+		return;	
+	}
+
+	float scale = 1.0f;
+
+	int w = std::min(constants::GRID_WIDTH, width);
+	int h = std::min(constants::GRID_WIDTH, height);
+	for (unsigned int y=0u; y<h; y++) {
+		float tY = (float)(y) / (float)(h);
+		for (unsigned int x=0u; x<w; x++) {
+			float tX = (float)(x) / (float)(w);
+
+			unsigned int idx = (y * w) + x;
+			unsigned char* ptr = mapData + (idx * 3);
+
+			singleLayerVertexArray.emplace_back(glm::vec3(
+				(tX-0.5f)*w*scale, (tY-0.5f)*h*scale,
+				((float)(*ptr) / 255.0f) * (maximum - minimum) + minimum
+			));
+			singleLayerNormalArray.emplace_back(glm::vec3(
+				0.0f, 0.0f, 1.0f
+			));
+		}
+	}
+
+	stbi_image_free(mapData);
+}
+
+
+
+
 std::vector<float> vertices;
 std::vector<GLuint> indices;
 GLuint getVAO(int n) {
 	vertices.clear(); indices.clear();
 	vertices.reserve(singleLayerVertexArray.size() * 6);
-	graphics::generateGrid(n);
+	//graphics::generateGrid(n);
+	graphics::loadMap("original");
 
 	for (int vIdx = 0; vIdx < singleLayerVertexArray.size(); vIdx++) {
 		glm::vec3 position = singleLayerVertexArray[vIdx];

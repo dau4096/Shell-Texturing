@@ -1,6 +1,9 @@
-
+/* main.cpp */
+#define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image.h>
 #include <stb_image_write.h>
+
 
 #include "src/includes.h"
 #include "src/physics.h"
@@ -167,6 +170,9 @@ int main() {
 	timeV = 18000u; //5am start
 	#endif
 
+
+
+	graphics::saveMap("tmp");
 
 
 	//Timer queries;

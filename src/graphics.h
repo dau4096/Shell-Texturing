@@ -35,6 +35,9 @@ namespace graphics {
 	GLuint getVAO();
 	glm::mat4 getPVMMatrix();
 
+	void saveMap(const std::string filename, const float minimum=-4.0f, const float maximum=4.0f);
+	void loadMap(const std::string filename, const float minimum=-4.0f, const float maximum=4.0f);
+
 	void saveScreenshot(const std::string dir, const std::string filename);
 
 	void updateSamplesDataset(const glm::vec3 sunDirection=display::SUN_DIRECTION);
